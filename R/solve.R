@@ -1,0 +1,213 @@
+## ============================================================
+## LASAGNA graph solving functions
+## ============================================================
+
+
+#' Solve LASAGNA graph for a single phenotype
+#'
+#' Given a LASAGNA model and a phenotype (column of Y), computes
+#' per-node fold change and correlation, then weights edges
+#' accordingly. The resulting graph is pruned to \code{max_edges}
+#' per connection type.
+#'
+#' @param obj A LASAGNA model (output of
+#'   \code{create_model}).
+#' @param pheno Column name in \code{obj$Y} to solve for.
+#' @param max_edges Maximum edges per connection type.
+#' @param value.type Node value type: \code{"rho"} or \code{"fc"}.
+#' @param min_rho Minimum absolute weight threshold.
+#' @param prune Remove disconnected vertices.
+#' @param fc.weights Weight edges by node fold change.
+#' @param sp.weight Use shortest-path weighting.
+#' @param graph Optional pre-existing graph to use instead of
+#'   \code{obj$graph}.
+#'
+#' @return An igraph object with solved weights and node values.
+#' @export
+solve <- function(obj, pheno, max_edges = 100,
+                  value.type = c("rho","fc")[1],
+                  min_rho = 0, prune = TRUE, fc.weights = TRUE,
+                  sp.weight = FALSE, graph = NULL) {
+  if (!pheno %in% colnames(obj$Y)) {
+    stop("pheno not in Y")
+  }
+  if (!"rho" %in% names(igraph::edge_attr(obj$graph))) {
+    stop("graph edges should have rho attribute")
+  }
+
+  if (is.null(graph)) graph <- obj$graph
+  X <- obj$X
+  y <- obj$Y[, pheno]
+
+  ## check if phenotype was coded -1/0/1
+  ii <- grep("PHENO", rownames(X))
+  has.min1 <- (min(X[ii, ], na.rm = TRUE) < 0)
+  if (length(ii) && has.min1) {
+    X[ii, ][which(X[ii, ] == 0)] <- NA
+    y[y == 0] <- NA
+  }
+
+  rho <- stats::cor(t(X), y, use = "pairwise")[, 1]
+  i0 <- which(y <= 0)
+  i1 <- which(y > 0)
+  m1 <- rowMeans(X[, i1, drop = FALSE], na.rm = TRUE)
+  m0 <- rowMeans(X[, i0, drop = FALSE], na.rm = TRUE)
+  fc <- m1 - m0
+  rho[is.na(rho)] <- 0
+
+  ## for PHENO nodes 'foldchange' does not make sense
+  ii <- grep("PHENO", names(fc))
+  if (length(ii)) fc[ii] <- rho[ii]
+
+  ## set node values
+  igraph::V(graph)$rho <- rho
+  igraph::V(graph)$fc <- fc
+  if (value.type == "rho") {
+    igraph::V(graph)$value <- rho
+  } else {
+    igraph::V(graph)$value <- fc
+  }
+  graph$value.type <- value.type
+
+  ## set edge weights from node values
+  ww <- 1
+  weight.type <- "rho"
+  if (fc.weights) {
+    ee <- igraph::as_edgelist(graph)
+    ff <- igraph::V(graph)$value
+    names(ff) <- igraph::V(graph)$name
+    ww <- abs(ff[ee[, 1]] * ff[ee[, 2]])^0.5
+    weight.type <- paste0(weight.type, "*vv")
+  }
+
+  ## edge weighting
+  ee.rho <- igraph::E(graph)$rho
+  ee.rho[is.na(ee.rho)] <- 0.1234
+  igraph::E(graph)$weight <- ee.rho * ww
+
+  ## set SINK/SOURCE edges to 1
+  if (any(grepl("SINK|SOURCE", igraph::V(graph)$name))) {
+    igraph::E(graph)[.to("SINK")]$weight <- 1
+    igraph::E(graph)[.from("SOURCE")]$weight <- 1
+  }
+
+  if (sp.weight) {
+    sp.wt <- sp_edge_weight(graph, obj$layers)
+    sp.wt <- (sp.wt / max(sp.wt, na.rm = TRUE))^2
+    igraph::E(graph)$weight <- igraph::E(graph)$weight * sp.wt
+    weight.type <- paste0(weight.type, "*sp")
+  }
+  graph$weight.type <- weight.type
+
+  ## threshold by minimum weight
+  if (min_rho > 0) {
+    dsel <- which(abs(igraph::E(graph)$weight) < min_rho)
+    igraph::E(graph)$weight[dsel] <- 0
+  }
+
+  ## limit edges per connection type
+  if (max_edges > 0) {
+    ewt <- igraph::E(graph)$weight
+    esel <- tapply(
+      1:length(igraph::E(graph)), igraph::E(graph)$connection_type,
+      function(ii) utils::head(ii[order(-abs(ewt[ii]))], max_edges)
+    )
+    dsel <- setdiff(1:length(igraph::E(graph)), unlist(esel))
+    igraph::E(graph)$weight[dsel] <- 0
+  }
+
+  ## delete zero edges
+  graph <- igraph::delete_edges(graph, which(igraph::E(graph)$weight == 0))
+
+  ## prune vertices
+  if (prune) {
+    ewt <- igraph::E(graph)$weight
+    graph <- igraph::subgraph_from_edges(graph, which(abs(ewt) > 0))
+  }
+
+  return(graph)
+}
+
+## Internal: compute shortest-path-based edge weights
+sp_edge_weight <- function(graph, layers) {
+  layers <- unique(c("SOURCE", layers, "SINK"))
+  wt <- abs(igraph::E(graph)$weight)
+  wt[is.na(wt)] <- 0
+  ee <- igraph::as_edgelist(graph)
+  v1 <- ee[, 1]
+  v2 <- ee[, 2]
+  l1 <- match(igraph::V(graph)[v1]$layer, layers)
+  l2 <- match(igraph::V(graph)[v2]$layer, layers)
+  p1 <- ifelse(l1 < l2, v1, v2)
+  p2 <- ifelse(l1 < l2, v2, v1)
+  wt <- wt + 1e-8
+  s1 <- igraph::shortest_paths(graph,
+    from = "SOURCE", to = p1, weights = 1 / wt, output = "epath"
+  )
+  s2 <- igraph::shortest_paths(graph,
+    from = "SINK", to = p2, weights = 1 / wt, output = "epath"
+  )
+  sp <- mapply(c, s1$epath, s2$epath)
+  sp.score <- sapply(sp, function(e) min(wt[e], na.rm = TRUE))
+  sp.score
+}
+
+#' Solve LASAGNA graph for multiple phenotypes
+#'
+#' Solves the graph iteratively for multiple contrasts and returns
+#' the root-mean-square (RMS) consensus graph.
+#'
+#' @param obj A LASAGNA model.
+#' @param min_rho Minimum absolute weight threshold for final
+#'   graph.
+#' @param traits Character vector of trait names (columns of Y). If
+#'   NULL, all traits are used.
+#' @param max_edges Maximum edges per connection type per trait.
+#' @param value.type Node value type.
+#' @param fc.weights Use fold-change weighting.
+#' @param prune Remove disconnected vertices.
+#' @param sp.weight Use shortest-path weighting.
+#'
+#' @return An igraph object representing the RMS consensus graph.
+#' @export
+multisolve <- function(obj, min_rho = 0.2, traits = NULL,
+                               max_edges = 100, value.type = "rho",
+                               fc.weights = TRUE, prune = TRUE,
+                               sp.weight = FALSE) {
+  if (is.null(traits)) traits <- colnames(obj$Y)
+  traits <- intersect(traits, colnames(obj$Y))
+
+  M <- list()
+  for (ct in traits) {
+    solved <- solve(
+      obj,
+      pheno = ct,
+      min_rho = min_rho,
+      max_edges = max_edges,
+      value.type = value.type,
+      fc.weights = fc.weights,
+      sp.weight = sp.weight,
+      prune = FALSE
+    )
+    adj <- igraph::as_adjacency_matrix(solved, attr = "weight")
+    M[[ct]] <- adj
+  }
+
+  ## RMS adjacency matrix as consensus solution
+  M <- lapply(M, function(mat) as.matrix(mat^2))
+  avgM <- sqrt(Reduce("+", M) / length(M))
+  avgM <- avgM * (avgM > min_rho)
+
+  gr <- obj$graph
+  ee <- igraph::get.edges(gr, igraph::E(gr))
+  igraph::E(gr)$weight <- sign(igraph::E(gr)$weight) * avgM[ee]
+  del.ee <- which(abs(igraph::E(gr)$weight) < min_rho)
+  gr <- igraph::delete_edges(gr, del.ee)
+
+  if (prune) {
+    del.vv <- which(igraph::degree(gr) == 0)
+    gr <- igraph::delete_vertices(gr, del.vv)
+  }
+
+  return(gr)
+}

@@ -1,0 +1,29 @@
+Package: lasagna
+Type: Package
+Title: Multi-Layer Graph Analysis for Multi-Omics Data
+Version: 0.1.0
+Author: BigOmics Analytics SA
+Maintainer: Ivo Kwee <ivo.kwee@bigomics.com>
+Description: LASAGNA (multi-layer graph analysis) builds multi-partite
+    graphs from multi-omics data layers and solves for condition-specific
+    subnetworks. Supports interactive 3D visualization with plotly,
+    visNetwork, and grimon.
+License: Dual Commercial and Non-Commercial
+Encoding: UTF-8
+RoxygenNote: 7.3.3
+Depends: R (>= 3.5)
+Imports:
+    igraph,
+    plotly,
+    visNetwork,
+    grimon,
+    gplots,
+    matrixStats,
+    stats,
+    utils,
+    methods,
+    grDevices,
+    graphics
+Suggests:
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
