@@ -4,12 +4,10 @@
 
 
 #' Solve LASAGNA graph for a single phenotype
-#'
 #' Given a LASAGNA model and a phenotype (column of Y), computes
 #' per-node fold change and correlation, then weights edges
 #' accordingly. The resulting graph is pruned to \code{max_edges}
 #' per connection type.
-#'
 #' @param obj A LASAGNA model (output of
 #'   \code{create_model}).
 #' @param pheno Column name in \code{obj$Y} to solve for.
@@ -21,21 +19,28 @@
 #' @param sp.weight Use shortest-path weighting.
 #' @param graph Optional pre-existing graph to use instead of
 #'   \code{obj$graph}.
-#'
 #' @return An igraph object with solved weights and node values.
 #' @export
-solve <- function(obj, pheno, max_edges = 100,
+solve <- function(obj,
+                  pheno,
+                  max_edges = 100,
                   value.type = c("rho","fc")[1],
-                  min_rho = 0, prune = TRUE, fc.weights = TRUE,
-                  sp.weight = FALSE, graph = NULL) {
+                  min_rho = 0,
+                  prune = TRUE,
+                  fc.weights = TRUE,
+                  sp.weight = FALSE,
+                  graph = NULL) {
+
   if (!pheno %in% colnames(obj$Y)) {
     stop("pheno not in Y")
   }
+
   if (!"rho" %in% names(igraph::edge_attr(obj$graph))) {
     stop("graph edges should have rho attribute")
   }
 
   if (is.null(graph)) graph <- obj$graph
+
   X <- obj$X
   y <- obj$Y[, pheno]
 
@@ -126,10 +131,12 @@ solve <- function(obj, pheno, max_edges = 100,
   }
 
   return(graph)
+
 }
 
 ## Internal: compute shortest-path-based edge weights
 sp_edge_weight <- function(graph, layers) {
+
   layers <- unique(c("SOURCE", layers, "SINK"))
   wt <- abs(igraph::E(graph)$weight)
   wt[is.na(wt)] <- 0
@@ -141,25 +148,27 @@ sp_edge_weight <- function(graph, layers) {
   p1 <- ifelse(l1 < l2, v1, v2)
   p2 <- ifelse(l1 < l2, v2, v1)
   wt <- wt + 1e-8
+
   s1 <- igraph::shortest_paths(graph,
     from = "SOURCE", to = p1, weights = 1 / wt, output = "epath"
   )
+
   s2 <- igraph::shortest_paths(graph,
     from = "SINK", to = p2, weights = 1 / wt, output = "epath"
   )
+
   sp <- mapply(c, s1$epath, s2$epath)
   sp.score <- sapply(sp, function(e) min(wt[e], na.rm = TRUE))
-  sp.score
+
+  return(sp.score)
+
 }
 
 #' Solve LASAGNA graph for multiple phenotypes
-#'
 #' Solves the graph iteratively for multiple contrasts and returns
 #' the root-mean-square (RMS) consensus graph.
-#'
 #' @param obj A LASAGNA model.
-#' @param min_rho Minimum absolute weight threshold for final
-#'   graph.
+#' @param min_rho Minimum absolute weight threshold for final graph.
 #' @param traits Character vector of trait names (columns of Y). If
 #'   NULL, all traits are used.
 #' @param max_edges Maximum edges per connection type per trait.
@@ -167,20 +176,23 @@ sp_edge_weight <- function(graph, layers) {
 #' @param fc.weights Use fold-change weighting.
 #' @param prune Remove disconnected vertices.
 #' @param sp.weight Use shortest-path weighting.
-#'
 #' @return An igraph object representing the RMS consensus graph.
 #' @export
-multisolve <- function(obj, min_rho = 0.2, traits = NULL,
-                               max_edges = 100, value.type = "rho",
-                               fc.weights = TRUE, prune = TRUE,
-                               sp.weight = FALSE) {
+multisolve <- function(obj,
+                       min_rho = 0.2,
+                       traits = NULL,
+                       max_edges = 100,
+                       value.type = "rho",
+                       fc.weights = TRUE,
+                       prune = TRUE,
+                       sp.weight = FALSE) {
+
   if (is.null(traits)) traits <- colnames(obj$Y)
   traits <- intersect(traits, colnames(obj$Y))
 
   M <- list()
   for (ct in traits) {
-    solved <- solve(
-      obj,
+    solved <- solve(obj,
       pheno = ct,
       min_rho = min_rho,
       max_edges = max_edges,
@@ -210,4 +222,5 @@ multisolve <- function(obj, min_rho = 0.2, traits = NULL,
   }
 
   return(gr)
+
 }
