@@ -34,10 +34,8 @@ mofa.split_data <- function(X, keep.prefix = FALSE) {
   }
   dtype <- sub(":.*", "", rownames(X))
   xx <- tapply(1:nrow(X), dtype, function(i) X[i, , drop = FALSE])
-  if (!keep.prefix) {
-    xx <- mofa.strip_prefix(xx)
-  }
-  xx
+  if (!keep.prefix) xx <- mofa.strip_prefix(xx)
+  return(xx)
 }
 
 mofa.merge_data <- function(xx) {
@@ -111,25 +109,31 @@ mofa.prefix <- function(xx) {
       rownames(xx[[i]]) <- paste0(dt, rownames(xx[[i]]))
     }
   }
-  xx
+  return(xx)
 }
 
 mofa.get_prefix <- function(x) {
+
   if (inherits(x, c("matrix", "data.frame")) || !is.null(dim(x))) {
     x <- rownames(x)
   }
+
   ifelse(grepl(":", x), sub(":.*", "", x), "")
+
 }
 
 mofa.strip_prefix <- function(xx) {
+
   if (is.character(xx)) {
     xx <- sub("^[A-Za-z0-9]+:", "", xx)
     return(xx)
   }
+
   if (is.matrix(xx)) {
     rownames(xx) <- sub("^[A-Za-z0-9]+:", "", rownames(xx))
     return(xx)
   }
+
   if (is.list(xx)) {
     for (i in 1:length(xx)) {
       dt <- paste0("^", names(xx)[i], ":")
@@ -141,14 +145,18 @@ mofa.strip_prefix <- function(xx) {
     }
     return(xx)
   }
-  xx
+
+  return(xx)
+
 }
 
 expandPhenoMatrix <- function(M, drop.ref = TRUE, keep.numeric = FALSE, check = TRUE) {
+
   a1 <- tidy.dataframe(M)
   nlevel <- apply(a1, 2, function(x) length(setdiff(unique(x), NA)))
   nterms <- colSums(!is.na(a1))
   nratio <- nlevel / nterms
+
   if (inherits(a1, "data.frame")) {
     a1.typed <- utils::type.convert(a1, as.is = TRUE)
     y.class <- sapply(a1.typed, function(a) class(a)[1])
@@ -164,17 +172,15 @@ expandPhenoMatrix <- function(M, drop.ref = TRUE, keep.numeric = FALSE, check = 
     nlev <- length(unique(x[!is.na(x)]))
     max(x, na.rm = TRUE) %in% c(nlev, nlev - 1)
   })
+
   is.fac2 <- (y.class == "integer" & nlevel <= 3 & nratio < 0.66)
   y.class[is.fac | is.fac2] <- "character"
 
   y.isnum <- (y.class %in% c("numeric", "integer"))
   kk <- which(y.isnum | (!y.isnum & nlevel > 1 & nratio < 0.66))
-  if (length(kk) == 0) {
-    kk <- which(y.isnum | (!y.isnum & nlevel > 1))
-  }
-  if (length(kk) == 0) {
-    return(NULL)
-  }
+
+  if (length(kk) == 0) kk <- which(y.isnum | (!y.isnum & nlevel > 1))
+  if (length(kk) == 0) return(NULL)
   a1 <- a1[, kk, drop = FALSE]
   a1.isnum <- y.isnum[kk]
 
@@ -207,9 +213,7 @@ expandPhenoMatrix <- function(M, drop.ref = TRUE, keep.numeric = FALSE, check = 
       colnames(m0) <- sub("^x", "", colnames(m0))
     }
     rownames(m0) <- rownames(a1)
-    if ("_" %in% colnames(m0)) {
-      m0 <- m0[, -which(colnames(m0) == "_")]
-    }
+    if ("_" %in% colnames(m0)) m0 <- m0[, -which(colnames(m0) == "_")]
     m1[[i]] <- m0
   }
 
@@ -220,7 +224,9 @@ expandPhenoMatrix <- function(M, drop.ref = TRUE, keep.numeric = FALSE, check = 
   m1 <- do.call(cbind, m1)
   colnames(m1) <- sub("=#", "", colnames(m1))
   rownames(m1) <- rownames(M)
+
   return(m1)
+
 }
 
 tidy.dataframe <- function(Y) {
@@ -301,9 +307,7 @@ uscale <- function(x, symm = FALSE) {
   }
   y[is.na(y)] <- NA
   if (symm) y <- (y - 0.5) * 2
-  return(y)
-}
 
-iconv2utf8 <- function(s) {
-  iconv(s, to = "UTF-8//TRANSLIT", sub = "")
+  return(y)
+
 }

@@ -2,14 +2,11 @@
 ## LASAGNA graph solving functions
 ## ============================================================
 
-
 #' Solve LASAGNA graph for a single phenotype
 #' Given a LASAGNA model and a phenotype (column of Y), computes
-#' per-node fold change and correlation, then weights edges
-#' accordingly. The resulting graph is pruned to \code{max_edges}
-#' per connection type.
-#' @param obj A LASAGNA model (output of
-#'   \code{create_model}).
+#' per-node fold change and correlation, then weights edges accordingly.
+#' The resulting graph is pruned to \code{max_edges} per connection type.
+#' @param obj A LASAGNA model (output of \code{create_model}).
 #' @param pheno Column name in \code{obj$Y} to solve for.
 #' @param max_edges Maximum edges per connection type.
 #' @param value.type Node value type: \code{"rho"} or \code{"fc"}.
@@ -17,8 +14,7 @@
 #' @param prune Remove disconnected vertices.
 #' @param fc.weights Weight edges by node fold change.
 #' @param sp.weight Use shortest-path weighting.
-#' @param graph Optional pre-existing graph to use instead of
-#'   \code{obj$graph}.
+#' @param graph Optional pre-existing graph to use instead of \code{obj$graph}.
 #' @return An igraph object with solved weights and node values.
 #' @export
 solve <- function(obj,
@@ -31,9 +27,7 @@ solve <- function(obj,
                   sp.weight = FALSE,
                   graph = NULL) {
 
-  if (!pheno %in% colnames(obj$Y)) {
-    stop("pheno not in Y")
-  }
+  if (!pheno %in% colnames(obj$Y)) stop("pheno not in Y")
 
   if (!"rho" %in% names(igraph::edge_attr(obj$graph))) {
     stop("graph edges should have rho attribute")

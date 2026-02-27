@@ -1,12 +1,9 @@
 ## ============================================================
 ## LASAGNA visualization functions
 ## ============================================================
-
 #' Plot multi-partite graph using base R graphics
-#'
 #' Draws a multi-layer LASAGNA graph as a parallel coordinate-style
 #' layout using base R \code{igraph::plot}.
-#'
 #' @param graph An igraph object (output of
 #'   \code{solve}).
 #' @param layers Character vector of layers to include.
@@ -31,20 +28,32 @@
 #' @param strip.prefix2 Remove prefix with regex.
 #' @param prune Remove disconnected vertices.
 #' @param layout Layout type: \code{"parallel"} or \code{"hive"}.
-#'
 #' @return Invisibly returns NULL. Called for side effect (plot).
 #' @export
-plot_multipartite <- function(graph, layers = NULL,
-                              min.rho = 0.5, ntop = 25,
-                              labels = NULL, cex.label = 1, vx.cex = 1,
-                              xpos = NULL, xlim = NULL, justgraph = FALSE,
-                              edge.cex = 1, edge.alpha = 0.33, edge.gamma = 2,
-                              xdist = 1, normalize.edges = FALSE, yheight = 0.85,
+plot_multipartite <- function(graph,
+                              layers = NULL,
+                              min.rho = 0.5,
+                              ntop = 25,
+                              labels = NULL,
+                              cex.label = 1,
+                              vx.cex = 1,
+                              xpos = NULL,
+                              xlim = NULL,
+                              justgraph = FALSE,
+                              edge.cex = 1,
+                              edge.alpha = 0.33,
+                              edge.gamma = 2,
+                              xdist = 1,
+                              normalize.edges = FALSE,
+                              yheight = 0.85,
                               edge.sign = c("both", "pos", "neg", "consensus")[1],
                               edge.type = c("both", "inter", "intra", "both2")[1],
-                              labpos = NULL, value.name = NULL,
-                              strip.prefix = FALSE, strip.prefix2 = FALSE,
-                              prune = FALSE, do.plot = TRUE,
+                              labpos = NULL,
+                              value.name = NULL,
+                              strip.prefix = FALSE,
+                              strip.prefix2 = FALSE,
+                              prune = FALSE,
+                              do.plot = TRUE,
                               color.var = "value",
                               layout = c("parallel", "hive")[1]) {
 
@@ -55,9 +64,7 @@ plot_multipartite <- function(graph, layers = NULL,
   if (!"value" %in% vattr) stop("ERROR: no value in vertex attributes!")
   if (!"layer" %in% vattr) stop("ERROR: no layer in vertex attributes!")
 
-  if (!is.null(labels)) {
-    names(labels) <- igraph::V(graph)$name
-  }
+  if (!is.null(labels)) names(labels) <- igraph::V(graph)$name
   
   graph <- prune_graph(
     graph,
@@ -71,12 +78,8 @@ plot_multipartite <- function(graph, layers = NULL,
     prune = prune
   )
 
-  if(length(igraph::V(graph))==0) {
-    message("WARNING: graph has no nodes")
-  }
-  if(length(igraph::E(graph))==0) {
-    message("WARNING: graph has no edges")
-  }
+  if (length(igraph::V(graph)) == 0) message("WARNING: graph has no nodes")
+  if (length(igraph::E(graph)) == 0) message("WARNING: graph has no edges")
   
   layers <- graph$layers
   layers <- setdiff(layers, c("SOURCE", "SINK"))
@@ -93,9 +96,7 @@ plot_multipartite <- function(graph, layers = NULL,
     }
   }
 
-  if (layout == "hive") {
-    layout.xy <- layout_hiveplot(graph)  
-  }
+  if (layout == "hive") layout.xy <- layout_hiveplot(graph)  
 
   if(do.plot) {
 
@@ -114,14 +115,14 @@ plot_multipartite <- function(graph, layers = NULL,
 
     ## node color by sign (or from color)
     vcol <- NULL
-    if(color.var=="value") {
+    if (color.var == "value") {
       vcol <- c("blue2", "red2")[1 + 1 * (fc[vv] > 0)]
     }
-    if(color.var=="color") {
+    if (color.var == "color") {
       vcol <- igraph::V(graph)$color
       vcol <- sub("^[A-Z]+","",vcol) ## strip away WGCNA prefix
     }
-    if(is.null(vcol)) vcol <- "grey70"
+    if (is.null(vcol)) vcol <- "grey70"
     vcol <- ifelse(is.na(vcol),"grey70",vcol)
     
     ## edge color by sign
@@ -184,14 +185,12 @@ plot_multipartite <- function(graph, layers = NULL,
       if (layers[i] == "PHENO") next
       graphics::text(xpos[i], -0.02, value.name,
         cex = 1.0 * cex.label, font = 2, pos = tpos,
-        adj = 1, offset = 1
-      )
+        adj = 1, offset = 1)
     }
     labposx <- labpos[match(vlayer, layers)]
     graphics::text(x, y,
       cex = 0.85 * cex.label, round(fc[rownames(layout.xy)], 2),
-      pos = labposx, adj = 1, offset = 1.0
-    )
+      pos = labposx, adj = 1, offset = 1.0)
     
     ## plot labels
     if (!is.null(labels)) {
@@ -203,24 +202,19 @@ plot_multipartite <- function(graph, layers = NULL,
       labels <- igraph::V(graph)$name
     }
     
-    if (strip.prefix) {
-      labels <- mofa.strip_prefix(labels)
-    }
-    if (strip.prefix2) {
-      labels <- sub("^[a-zA-Z]+:", "", labels)
-    }
+    if (strip.prefix) labels <- mofa.strip_prefix(labels)
+    if (strip.prefix2) labels <- sub("^[a-zA-Z]+:", "", labels)
     labels <- gsub("^NA \\(", "(", labels)
     graphics::text(x, y, labels, cex = cex.label, pos = labposx, adj = 1, offset = 2.8)
   }
   
-  ## return graph and layout
   out <- list(graph = graph, layout = layout.xy)
   invisible(out)
+
 }
 
 
 #' Plot LASAGNA graph as interactive network with visNetwork
-#'
 #' @param graph An igraph object.
 #' @param layers Character vector of layers to include.
 #' @param ntop Number of top nodes by absolute value.
@@ -229,16 +223,23 @@ plot_multipartite <- function(graph, layers = NULL,
 #' @param vcex Vertex size multiplier.
 #' @param ecex Edge width multiplier.
 #' @param physics Enable physics simulation.
-#'
 #' @return A visNetwork widget.
 #' @export
-plot_visgraph <- function(graph, layers = NULL, ntop = 100, min_rho = 0.3,
-                          mst = FALSE, vcex = 1, ecex = 1, egamma = 1,
-                          color.var = "value", labcex = 1,
-                          layout = NULL, physics = TRUE) {
-  if (is.null(layers)) {
-    layers <- graph$layers
-  }
+plot_visgraph <- function(graph,
+                          layers = NULL,
+                          ntop = 100,
+                          min_rho = 0.3,
+                          mst = FALSE,
+                          vcex = 1,
+                          ecex = 1,
+                          egamma = 1,
+                          color.var = "value",
+                          labcex = 1,
+                          layout = NULL,
+                          physics = TRUE) {
+
+  if (is.null(layers)) layers <- graph$layers
+
   sub <- igraph::subgraph(graph, igraph::V(graph)$layer %in% layers)
 
   if (mst) {
@@ -250,25 +251,26 @@ plot_visgraph <- function(graph, layers = NULL, ntop = 100, min_rho = 0.3,
     vsel <- utils::head(order(-abs(igraph::V(sub)$value)), ntop)
     sub <- igraph::subgraph(sub, vsel)
   }
+
   if (min_rho > 0) {
-    sub <- igraph::subgraph_from_edges(
-      sub, which(abs(igraph::E(sub)$weight) > min_rho)
-    )
+    sub <- igraph::subgraph_from_edges(sub, which(abs(igraph::E(sub)$weight) > min_rho))
   }
 
   vtype <- sub(":.*", "", igraph::V(sub)$name)
   ntypes <- length(unique(vtype))
   vcol <- "grey"
-  if(color.var %in% c("type","layer")) {
+
+  if (color.var %in% c("type","layer")) {
     vcol <- grDevices::rainbow(ntypes)[as.factor(vtype)]
   }
-  if(color.var == "value") {
+
+  if (color.var == "value") {
     vv <- igraph::V(sub)$value
     vcol <- c("blue", "red")[1 + 1 * (vv > 0)]
   }
-  if(color.var == "color") {
-    vcol <- igraph::V(sub)$color
-  }
+
+  if (color.var == "color") vcol <- igraph::V(sub)$color
+
   vcol <- sub("^[A-Z]+","",vcol) ## strip away WGCNA prefix
   igraph::V(sub)$color <- vcol
   igraph::V(sub)$color.border <- "black"
@@ -277,7 +279,6 @@ plot_visgraph <- function(graph, layers = NULL, ntop = 100, min_rho = 0.3,
   igraph::V(sub)$shape <- c("triangleDown", "triangle")[as.factor(vtype)]
   igraph::V(sub)$value <- abs(igraph::V(sub)$value)^2
   igraph::V(sub)$label.cex <- 0.8 * labcex
-  ##igraph::V(sub)$size <- igraph::V(sub)$value
 
   ## make special nodes as large as largest size
   sel <- which(igraph::V(sub)$layer %in% c("SOURCE", "SINK", "PHENO"))
@@ -285,11 +286,9 @@ plot_visgraph <- function(graph, layers = NULL, ntop = 100, min_rho = 0.3,
     cex <- max(abs(igraph::V(sub)$value)) / max(abs(igraph::V(sub)$value[sel]))
     igraph::V(sub)$value[sel] <- igraph::V(sub)$value[sel] * cex
   }
-  #igraph::V(sub)$value <- vcex * igraph::V(sub)$value
-  #igraph::V(sub)$size  <- vcex * igraph::V(sub)$value  
+
   igraph::E(sub)$width <- 5 * ecex * abs(igraph::E(sub)$weight)^egamma
   igraph::E(sub)$color <- c("orange", "purple")[1 + 1 * (igraph::E(sub)$weight > 0)]
-  ##igraph::E(sub)$color.opacity <- 0.2
   
   data <- visNetwork::toVisNetworkData(sub, idToLabel=FALSE)
 
@@ -321,47 +320,46 @@ plot_visgraph <- function(graph, layers = NULL, ntop = 100, min_rho = 0.3,
       )
     )
 
-  if(is.null(layout) && !is.null(sub$layout)) {
-    layout <- sub$layout
-  }
+  if (is.null(layout) && !is.null(sub$layout)) layout <- sub$layout
   
-  if(!is.null(layout)) {
+  if (!is.null(layout)) {
     vv <- data$nodes$id
     M <- layout[vv,]
     M[,2] <- -M[,2]
-    vis <- vis %>%
-      visNetwork::visIgraphLayout(layout="layout.norm", layoutMatrix=M)
+    vis <- vis %>% visNetwork::visIgraphLayout(layout = "layout.norm", layoutMatrix = M)
   }
   
   return(vis)
+
 }
 
 
 #' Plot LASAGNA graph in 3D using plotly
-#'
 #' Wrapper that creates a 3D plotly visualization from a solved
 #' LASAGNA graph and precomputed 2D positions per layer.
-#'
-#' @param graph An igraph object (output of
-#'   \code{solve}).
+#' @param graph An igraph object (output of \code{solve}).
 #' @param pos Named list of 2-column position matrices per layer.
 #' @param draw_edges Logical; draw inter-layer edges.
 #' @param min_rho Minimum absolute weight for edges.
 #' @param num_edges Maximum number of edges per layer pair.
-#' @param znames Named character vector mapping layer codes to
-#'   display names.
-#'
+#' @param znames Named character vector mapping layer codes to display names.
 #' @return A plotly object.
 #' @export
-plot_3d <- function(graph, layout, draw_edges = TRUE, num_edges = 40, 
-                    min_rho = 0.1, sign_rho = c("pos","both")[1],
-                    cex = 1, cex.gamma = 1, color.by="value", znames = NULL) {
+plot_3d <- function(graph,
+                    layout,
+                    draw_edges = TRUE,
+                    num_edges = 40, 
+                    min_rho = 0.1,
+                    sign_rho = c("pos","both")[1],
+                    cex = 1,
+                    cex.gamma = 1,
+                    color.by="value",
+                    znames = NULL) {
+
   edges <- NULL
   if (draw_edges) {
-    edges <- data.frame(
-      igraph::as_edgelist(graph),
-      weight = igraph::E(graph)$weight
-    )
+    edges <- data.frame(igraph::as_edgelist(graph),
+      weight = igraph::E(graph)$weight)
   }
   
   if(is.matrix(layout) || is.data.frame(layout)) {
@@ -387,11 +385,12 @@ plot_3d <- function(graph, layout, draw_edges = TRUE, num_edges = 40,
   df$size <- abs(as.numeric(vars))^cex.gamma
   df$color <- as.numeric(vars)
   
-  if(!is.null(igraph::V(graph)$color) && color.by == "color") {
+  if (!is.null(igraph::V(graph)$color) && color.by == "color") {
     df$color <- igraph::V(graph)[df$feature]$color
     df$color <- sub("^[A-Z]+","",df$color) ## remove prefix
   }
-  if(!is.null(igraph::V(graph)$size)) {
+
+  if (!is.null(igraph::V(graph)$size)) {
     vsize <- igraph::V(graph)[df$feature]$size
     df$size <- (vsize / max(vsize, na.rm=TRUE))^cex.gamma
   }
@@ -399,18 +398,18 @@ plot_3d <- function(graph, layout, draw_edges = TRUE, num_edges = 40,
   levels <- intersect(graph$layers, names(layout))
   df$z <- factor(df$z, levels = levels)
   df$text <- paste(df$feature, "<br>value:", round(df$value, digits = 3))
-  #colnames(df) <- c("feature", "x", "y", "z", "color", "size", "text")
 
   ## filter edges
   if (!is.null(edges) && min_rho >= 0) {
-    if(sign_rho == "pos") {
+    if (sign_rho == "pos") {
       edges <- edges[ which(edges[, 3] > min_rho), ]
-    } else if(sign_rho == "neg") {
+    } else if (sign_rho == "neg") {
       edges <- edges[ which(edges[, 3] < -min_rho), ]
     } else {
       edges <- edges[ which(abs(edges[, 3]) > min_rho), ]
     }
   }
+
   if (!is.null(edges) && num_edges > 0) {
     for (i in 1:(length(levels) - 1)) {
       v1 <- rownames(layout[[i]])
@@ -443,23 +442,23 @@ plot_3d <- function(graph, layout, draw_edges = TRUE, num_edges = 40,
     )
   }
 
-  fig <- plotlyLasagna(df, znames = znames, edges = edges, cex = cex)
-  return(fig)
+  return(plotlyLasagna(df, znames = znames, edges = edges, cex = cex))
+
 }
 
 #' Internal plotly builder for LASAGNA 3D plot
-#'
 #' Builds the actual plotly figure from a prepared data frame.
-#'
-#' @param df Data frame with columns: feature, x, y, z, color,
-#'   text.
+#' @param df Data frame with columns: feature, x, y, z, color, text.
 #' @param znames Named character vector for layer display names.
 #' @param cex Point size multiplier.
 #' @param edges Optional data frame of edges.
-#'
 #' @return A plotly object.
 #' @export
-plotlyLasagna <- function(df, znames = NULL, cex = 1, edges = NULL) {
+plotlyLasagna <- function(df,
+                          znames = NULL,
+                          cex = 1,
+                          edges = NULL) {
+
   zz <- sort(unique(df$z))
   min.x <- min(df$x, na.rm = TRUE)
   max.x <- max(df$x, na.rm = TRUE)
@@ -467,13 +466,16 @@ plotlyLasagna <- function(df, znames = NULL, cex = 1, edges = NULL) {
   max.y <- max(df$y, na.rm = TRUE)
 
   edgetype1 <- edgetype2 <- NULL
+
   if (!is.null(edges)) {
     edgetype1 <- mofa.get_prefix(edges[, 1])
     edgetype2 <- mofa.get_prefix(edges[, 2])
   }
+
   if (is.null(df$text)) df$text <- rownames(df)
 
   fig <- plotly::plot_ly()
+
   for (k in 1:length(zz)) {
     z <- zz[k]
     df1 <- df[which(df$z == z), c("x", "y", "z", "color", "size", "text")]
@@ -506,10 +508,7 @@ plotlyLasagna <- function(df, znames = NULL, cex = 1, edges = NULL) {
         marker = list(
           size = ~size * 15 * cex + 3,
           color = ~color,
-          line = list(
-            color = "#88888844",
-            width = 0.0
-          ),
+          line = list(color = "#88888844", width = 0.0),
           colorscale = "Bluered",
           showscale = FALSE,
           showlegend = FALSE
@@ -530,7 +529,6 @@ plotlyLasagna <- function(df, znames = NULL, cex = 1, edges = NULL) {
         dfe <- rbind(df1[, c("x", "y", "z")], df2[, c("x", "y", "z")])[idx, ]
         dfe$pair_id <- as.vector(mapply(rep, 1:nrow(ee), 2))
         dfe$col <- c("orange", "magenta")[1 + (ee[, 3] > 0)]
-        #dfe$col <- c("blue", "red")[1 + (ee[, 3] > 0)]
         
         fig <- fig %>%
           plotly::add_trace(
@@ -539,11 +537,7 @@ plotlyLasagna <- function(df, znames = NULL, cex = 1, edges = NULL) {
             z = dfe$z,
             type = "scatter3d",
             mode = "lines",
-            line = list(
-              color = dfe$col,
-              width = 0.3,
-              opacity = 0.2
-            ),
+            line = list(color = dfe$col, width = 0.3, opacity = 0.2),
             split = dfe$pair_id,
             showlegend = FALSE,
             inherit = FALSE
@@ -586,6 +580,7 @@ plotlyLasagna <- function(df, znames = NULL, cex = 1, edges = NULL) {
 }
 
 layout_multipartite <- function(graph, xpos=NULL, xdist=1) {
+
   layers <- graph$layers
   layers <- setdiff(layers, c("SOURCE","SINK"))
   if (is.null(xpos)) xpos <- c(0:(length(layers) - 1))
@@ -596,15 +591,19 @@ layout_multipartite <- function(graph, xpos=NULL, xdist=1) {
   y <- igraph::V(graph)$value
   layout.xy <- cbind(x = x, y = y)
   rownames(layout.xy) <- igraph::V(graph)$name
+
   for (i in unique(layout.xy)[, 1]) {
     ii <- which(layout.xy[, 1] == i)
     layout.xy[ii, 2] <- rank(layout.xy[ii, 2], ties.method = "random") / length(ii)
     if (length(ii) == 1) layout.xy[ii, 2] <- 0.5 * layout.xy[ii, 2]
   }
+
   return(layout.xy)
+
 }
 
 layout_hiveplot <- function(graph) {
+
   layers <- graph$layers
   layers <- setdiff(layers, c("SOURCE","SINK"))
   nlayers <- length(layers)
@@ -624,45 +623,7 @@ layout_hiveplot <- function(graph) {
     layout.xy[ii, ] <- cbind(x, y)
   }
   rownames(layout.xy) <- igraph::V(graph)$name
-  return(layout.xy)
-}
 
-layout_multipartite_3d <- function(graph, X, clust='svd') {
-  tscale <- function(x) t(scale(t(x)))
-  xdata <- mofa.split_data(X)
-  layers <- setdiff(graph$layers, c("SOURCE","SINK"))
-  xdata <- xdata[layers]
-  xdata <- lapply(xdata, tscale)
-  pos3d <- vector("list",length(xdata))
-  names(pos3d) <- names(xdata)
-  sel1 <- names(pos3d)[which(sapply(xdata,nrow) > 10)]
-  sel2 <- setdiff(names(xdata), sel1)
-  if(clust %in% c('tsne')) {
-    pos3d[sel1] <- lapply(xdata[sel1], function(x) Rtsne::Rtsne(
-      x, perplexity = max(min(30, nrow(x)/5),1),
-      check_duplicates = FALSE)$Y)
-  }
-  if(clust %in% c('umap')) {
-    pos3d[sel1] <- lapply(xdata[sel1], function(x) uwot::umap(
-      x, n_neighbors = max(min(15, nrow(x)/5),2)))
-  }
-  if(clust %in% c('svd','pca')) {
-    pos3d[sel1] <- lapply(xdata[sel1], function(x) irlba::irlba(x,nv=2)$u[,1:2])
-  }  
-  if(length(sel2)) {
-    pos3d[sel2] <- lapply(xdata[sel2], function(x) irlba::irlba(x,nv=2)$u[,1:2])
-  }  
-  for(i in 1:length(pos3d)) {
-    colnames(pos3d[[i]]) <- c("x","y")
-    dt <- names(xdata)[i]
-    pos3d[[i]] <- data.frame(z=dt, pos3d[[i]])
-    rownames(pos3d[[i]]) <- paste0(dt,":",rownames(xdata[[i]]))
-  }
-  names(pos3d) <- NULL
-  pos3d <- do.call(rbind, pos3d)
-  vv <- igraph::V(graph)$name
-  setdiff(vv, rownames(pos3d))
-  vv <- intersect(vv, rownames(pos3d))
-  pos3d <- pos3d[vv,]
-  return(pos3d)
+  return(layout.xy)
+
 }

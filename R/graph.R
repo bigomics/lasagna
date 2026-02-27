@@ -1,21 +1,14 @@
 ## ============================================================
 ## LASAGNA graph pruning functions
 ## ============================================================
-
 #' Prune a solved LASAGNA graph
-#'
 #' Filters vertices and edges by layer, node value, edge weight,
 #' edge sign, and edge type (inter vs intra). Useful for reducing
 #' graph complexity before visualization.
-#'
-#' @param graph An igraph object (output of \code{solve}
-#'   or \code{multisolve}).
-#' @param ntop Number of top features per layer (by absolute
-#'   value).
-#' @param layers Character vector of layers to keep. If NULL, uses
-#'   all.
-#' @param normalize.edges Normalize edge weights per connection
-#'   type.
+#' @param graph An igraph object (output of \code{solve} or \code{multisolve}).
+#' @param ntop Number of top features per layer (by absolute value).
+#' @param layers Character vector of layers to keep. If NULL, uses all.
+#' @param normalize.edges Normalize edge weights per connection type.
 #' @param min.rho Minimum absolute edge weight.
 #' @param edge.sign Which edge signs to keep: \code{"both"},
 #'   \code{"pos"}, \code{"neg"}, or \code{"consensus"}.
@@ -24,14 +17,19 @@
 #' @param filter Named list for regex filtering nodes per layer.
 #' @param select Character vector of node names to select.
 #' @param prune Remove disconnected vertices.
-#'
 #' @return A pruned igraph object.
 #' @export
-prune_graph <- function(graph, ntop = 100, layers = NULL,
-                        normalize.edges = FALSE, min.rho = 0.3,
+prune_graph <- function(graph,
+                        ntop = 100,
+                        layers = NULL,
+                        normalize.edges = FALSE,
+                        min.rho = 0.3,
                         edge.sign = c("both", "pos", "neg", "consensus")[1],
                         edge.type = c("both", "inter", "intra", "both2")[1],
-                        filter = NULL, select = NULL, prune = TRUE) {
+                        filter = NULL,
+                        select = NULL,
+                        prune = TRUE) {
+
   if (is.null(layers)) layers <- graph$layers
   if (is.null(layers)) layers <- unique(igraph::V(graph)$layer)
   layers <- setdiff(layers, c("SOURCE", "SINK"))
@@ -112,8 +110,8 @@ prune_graph <- function(graph, ntop = 100, layers = NULL,
   }
   graph <- igraph::delete_edges(graph, which(igraph::E(graph)$weight == 0))
 
-  if (prune) {
-    graph <- igraph::subgraph_from_edges(graph, igraph::E(graph))
-  }
+  if (prune) graph <- igraph::subgraph_from_edges(graph, igraph::E(graph))
+
   return(graph)
+
 }

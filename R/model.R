@@ -1,13 +1,9 @@
 ## ============================================================
 ## LASAGNA model creation functions
 ## ============================================================
-
 #' Create LASAGNA multi-layer graph model
-#'
 #' Builds a multi-partite graph from multi-omics data layers.
-#' Edges are weighted by correlation, optionally conditioned on
-#' phenotype.
-#'
+#' Edges weighted by correlation, optionally conditioned on phenotype.
 #' @param data A list with \code{X} (named list of data matrices),
 #'   \code{samples} (data frame), and optionally \code{contrasts}.
 #' @param pheno Phenotype type: \code{"pheno"}, \code{"expanded"},
@@ -23,7 +19,6 @@
 #' @param fully_connect Fully connect all layers.
 #' @param add.revpheno Add reversed phenotype contrasts.
 #' @param condition.edges Weight edges by phenotype correlation.
-#'
 #' @return A list with components:
 #' \describe{
 #'   \item{graph}{An igraph object with layers, edge weights, and
@@ -33,10 +28,19 @@
 #'   \item{layers}{Character vector of layer names.}
 #' }
 #' @export
-create_model <- function(data, meta.type = "pheno", ntop = 1000, nc = 20,
-                         annot = NULL, mask.gmt = TRUE, mask.graphite = TRUE,
-                         add.sink = FALSE, intra = TRUE, fully_connect = FALSE,
-                         add.revpheno = TRUE, condition.edges = TRUE) {
+create_model <- function(data,
+                         meta.type = "pheno",
+                         ntop = 1000,
+                         nc = 20,
+                         annot = NULL,
+                         mask.gmt = TRUE,
+                         mask.graphite = TRUE,
+                         add.sink = FALSE,
+                         intra = TRUE,
+                         fully_connect = FALSE,
+                         add.revpheno = TRUE,
+                         condition.edges = TRUE) {
+
   if (meta.type %in% c("pheno","samples")) {
     Y <- expandPhenoMatrix(data$samples, drop.ref = FALSE)
   } else if (meta.type %in% c("expanded","traits")) {
@@ -76,9 +80,7 @@ create_model <- function(data, meta.type = "pheno", ntop = 1000, nc = 20,
   Y <- Y[kk, ]
 
   ## add SOURCE/SINK
-  if (add.sink) {
-    X <- rbind(X, "SOURCE" = 1, "SINK" = 1)
-  }
+  if (add.sink) X <- rbind(X, "SOURCE" = 1, "SINK" = 1)
 
   ## compute correlation matrix
   suppressWarnings(R <- stats::cor(t(X), use = "pairwise"))
@@ -90,11 +92,8 @@ create_model <- function(data, meta.type = "pheno", ntop = 1000, nc = 20,
     R[, ii] <- 1
   }
 
-  ## save
   R0 <- R
-
-  ## replace NA correlations with constant
-  R[is.na(R)] <- 0.1234
+  R[is.na(R)] <- 0.1234 ## replace NA with constant
 
   ## condition edges by phenotype correlation
   if (condition.edges) {
@@ -105,11 +104,6 @@ create_model <- function(data, meta.type = "pheno", ntop = 1000, nc = 20,
     if (length(ii)) maxrho[ii] <- 1
     rho.wt <- outer(maxrho, maxrho)
     R <- R * rho.wt
-  }
-
-  ## mask for GSETS/pathways connections
-  if (mask.gmt) {
-    ## placeholder
   }
 
   ## define layers
@@ -167,10 +161,8 @@ create_model <- function(data, meta.type = "pheno", ntop = 1000, nc = 20,
   ## create graph from correlation
   R0[which(R == 0)] <- 0
   R0[is.na(R0)] <- 0
-  gr <- igraph::graph_from_adjacency_matrix(
-    R0,
-    diag = FALSE, weighted = TRUE, mode = "undirected"
-  )
+  gr <- igraph::graph_from_adjacency_matrix(R0, diag = FALSE,
+    weighted = TRUE, mode = "undirected")
 
   igraph::E(gr)$rho <- igraph::E(gr)$weight
   gr$layers <- layers
@@ -189,10 +181,6 @@ create_model <- function(data, meta.type = "pheno", ntop = 1000, nc = 20,
   ii <- which(etype1 == etype2)
   if (length(ii)) igraph::E(gr)$connection_type[ii] <- etype1[ii]
 
-  list(
-    graph = gr,
-    X = X,
-    Y = Y,
-    layers = layers
-  )
+  return(list(graph = gr, X = X, Y = Y, layers = layers))
+
 }
