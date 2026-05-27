@@ -29,6 +29,18 @@
 #' @param prune Remove disconnected vertices.
 #' @param layout Layout type: \code{"parallel"} or \code{"hive"}.
 #' @return Invisibly returns NULL. Called for side effect (plot).
+#' @examples
+#' set.seed(1)
+#' gx <- matrix(rnorm(20 * 10), 20, 10,
+#'   dimnames = list(paste0("g", 1:20), paste0("S", 1:10)))
+#' px <- matrix(rnorm(15 * 10), 15, 10,
+#'   dimnames = list(paste0("p", 1:15), paste0("S", 1:10)))
+#' samples <- data.frame(group = rep(c("A", "B"), each = 5),
+#'   row.names = paste0("S", 1:10))
+#' data <- list(X = list(gx = gx, px = px), samples = samples)
+#' model <- create_model(data, ntop = 10, nc = 5)
+#' g <- solve(model, pheno = colnames(model$Y)[1], prune = FALSE)
+#' mp <- plot_multipartite(g, min.rho = 0, ntop = 10)
 #' @export
 plot_multipartite <- function(graph,
                               layers = NULL,
@@ -224,6 +236,18 @@ plot_multipartite <- function(graph,
 #' @param ecex Edge width multiplier.
 #' @param physics Enable physics simulation.
 #' @return A visNetwork widget.
+#' @examples
+#' set.seed(1)
+#' gx <- matrix(rnorm(20 * 10), 20, 10,
+#'   dimnames = list(paste0("g", 1:20), paste0("S", 1:10)))
+#' px <- matrix(rnorm(15 * 10), 15, 10,
+#'   dimnames = list(paste0("p", 1:15), paste0("S", 1:10)))
+#' samples <- data.frame(group = rep(c("A", "B"), each = 5),
+#'   row.names = paste0("S", 1:10))
+#' data <- list(X = list(gx = gx, px = px), samples = samples)
+#' model <- create_model(data, ntop = 10, nc = 5)
+#' g <- solve(model, pheno = colnames(model$Y)[1], prune = FALSE)
+#' vis <- plot_visgraph(g, min_rho = 0, ntop = 20)
 #' @export
 plot_visgraph <- function(graph,
                           layers = NULL,
@@ -344,6 +368,24 @@ plot_visgraph <- function(graph,
 #' @param num_edges Maximum number of edges per layer pair.
 #' @param znames Named character vector mapping layer codes to display names.
 #' @return A plotly object.
+#' @examples
+#' set.seed(1)
+#' gx <- matrix(rnorm(20 * 10), 20, 10,
+#'   dimnames = list(paste0("g", 1:20), paste0("S", 1:10)))
+#' px <- matrix(rnorm(15 * 10), 15, 10,
+#'   dimnames = list(paste0("p", 1:15), paste0("S", 1:10)))
+#' samples <- data.frame(group = rep(c("A", "B"), each = 5),
+#'   row.names = paste0("S", 1:10))
+#' data <- list(X = list(gx = gx, px = px), samples = samples)
+#' model <- create_model(data, ntop = 10, nc = 5)
+#' g <- solve(model, pheno = colnames(model$Y)[1], prune = FALSE)
+#' ## build a simple per-layer 3D layout (random x/y, z = layer)
+#' vn <- igraph::V(g)$name
+#' layout <- data.frame(
+#'   x = runif(length(vn)), y = runif(length(vn)),
+#'   z = sub(":.*", "", vn),
+#'   row.names = sub(".*:", "", vn))
+#' fig <- plot_3d(g, layout = layout, num_edges = 20, min_rho = 0)
 #' @export
 plot_3d <- function(graph,
                     layout,
@@ -453,6 +495,15 @@ plot_3d <- function(graph,
 #' @param cex Point size multiplier.
 #' @param edges Optional data frame of edges.
 #' @return A plotly object.
+#' @examples
+#' set.seed(1)
+#' df <- data.frame(
+#'   feature = paste0("f", 1:10),
+#'   x = runif(10), y = runif(10),
+#'   z = rep(c("gx", "px"), each = 5),
+#'   color = rnorm(10), size = runif(10),
+#'   text = paste0("f", 1:10))
+#' fig <- plotlyLasagna(df)
 #' @export
 plotlyLasagna <- function(df,
                           znames = NULL,
