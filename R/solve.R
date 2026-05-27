@@ -120,10 +120,10 @@ solve <- function(obj,
   if (max_edges > 0) {
     ewt <- igraph::E(graph)$weight
     esel <- tapply(
-      1:length(igraph::E(graph)), igraph::E(graph)$connection_type,
+      seq_along(igraph::E(graph)), igraph::E(graph)$connection_type,
       function(ii) utils::head(ii[order(-abs(ewt[ii]))], max_edges)
     )
-    dsel <- setdiff(1:length(igraph::E(graph)), unlist(esel))
+    dsel <- setdiff(seq_along(igraph::E(graph)), unlist(esel))
     igraph::E(graph)$weight[dsel] <- 0
   }
 
@@ -164,7 +164,7 @@ sp_edge_weight <- function(graph, layers) {
   )
 
   sp <- mapply(c, s1$epath, s2$epath)
-  sp.score <- sapply(sp, function(e) min(wt[e], na.rm = TRUE))
+  sp.score <- vapply(sp, function(e) min(wt[e], na.rm = TRUE), numeric(1))
 
   return(sp.score)
 

@@ -179,7 +179,7 @@ plot_multipartite <- function(graph,
     y <- layout.xy[, 2]
   
     ## titles
-    for (i in 1:length(layers)) {
+    for (i in seq_along(layers)) {
       grp1 <- layers[i]
       y1 <- y[which(vlayer == grp1)]
       graphics::text(xpos[i], max(y1), grp1, font = 2, cex = 1.25, pos = 3, adj = 0, offset = 1.3)
@@ -197,7 +197,7 @@ plot_multipartite <- function(graph,
       value.name <- graph$value.type
     }
     if (is.null(value.name)) value.name <- "value"
-    for (i in 1:length(layers)) {
+    for (i in seq_along(layers)) {
       tpos <- labpos[i]
       if (layers[i] == "PHENO") next
       graphics::text(xpos[i], -0.02, value.name,
@@ -423,7 +423,7 @@ plot_3d <- function(graph,
   
   if(is.matrix(layout) || is.data.frame(layout)) {
     layout <- layout[,c("x","y","z")]
-    layout <- tapply(1:nrow(layout), layout[,'z'], function(i) layout[i,,drop=FALSE])
+    layout <- tapply(seq_len(nrow(layout)), layout[,'z'], function(i) layout[i,,drop=FALSE])
   }
 
   ## feature maps across datatypes
@@ -470,7 +470,7 @@ plot_3d <- function(graph,
   }
 
   if (!is.null(edges) && num_edges > 0) {
-    for (i in 1:(length(levels) - 1)) {
+    for (i in seq_len(length(levels) - 1)) {
       v1 <- rownames(layout[[i]])
       v2 <- rownames(layout[[i + 1]])
       jj <- which((edges[, 1] %in% v1) & (edges[, 2] %in% v2))
@@ -544,7 +544,7 @@ plotlyLasagna <- function(df,
 
   fig <- plotly::plot_ly()
 
-  for (k in 1:length(zz)) {
+  for (k in seq_along(zz)) {
     z <- zz[k]
     df1 <- df[which(df$z == z), c("x", "y", "z", "color", "size", "text")]
 
@@ -595,7 +595,7 @@ plotlyLasagna <- function(df,
         ee <- edges[sel, ]
         idx <- as.vector(t(as.matrix(ee[, 1:2])))
         dfe <- rbind(df1[, c("x", "y", "z")], df2[, c("x", "y", "z")])[idx, ]
-        dfe$pair_id <- as.vector(mapply(rep, 1:nrow(ee), 2))
+        dfe$pair_id <- as.vector(mapply(rep, seq_len(nrow(ee)), 2))
         dfe$col <- c("orange", "magenta")[1 + (ee[, 3] > 0)]
         
         fig <- fig %>%
@@ -680,7 +680,7 @@ layout_hiveplot <- function(graph) {
   rownames(layout.xy) <- igraph::V(graph)$name
   fc <- igraph::V(graph)$value  
   names(fc) <- igraph::V(graph)$name
-  for (i in 1:length(layers)) {
+  for (i in seq_along(layers)) {
     ii <- which(vlayer == layers[i])
     vv <- igraph::V(graph)[ii]
     phi <- pi / 2 + i * 2 * pi / nlayers

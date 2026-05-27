@@ -76,7 +76,7 @@ prune_graph <- function(graph,
   names(fc) <- igraph::V(graph)$name
   if (!is.null(ntop) && ntop > 0) {
     ii <- tapply(
-      1:length(fc), igraph::V(graph)$layer,
+      seq_along(fc), igraph::V(graph)$layer,
       function(i) utils::head(i[order(-abs(fc[i]))], ntop)
     )
     ii <- unlist(ii[names(ii) %in% layers])

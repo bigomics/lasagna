@@ -33,7 +33,7 @@ mofa.split_data <- function(X, keep.prefix = FALSE) {
     rownames(X) <- paste0("x:", rownames(X))
   }
   dtype <- sub(":.*", "", rownames(X))
-  xx <- tapply(1:nrow(X), dtype, function(i) X[i, , drop = FALSE])
+  xx <- tapply(seq_len(nrow(X)), dtype, function(i) X[i, , drop = FALSE])
   if (!keep.prefix) xx <- mofa.strip_prefix(xx)
   return(xx)
 }
@@ -45,8 +45,8 @@ mofa.merge_data <- function(xx) {
 mofa.merge_data2 <- function(xdata, merge.rows = "prefix", merge.cols = "union") {
   n1 <- length(Reduce(intersect, lapply(xdata, rownames)))
   n2 <- length(Reduce(intersect, lapply(xdata, colnames)))
-  rdim <- sapply(xdata, nrow)
-  cdim <- sapply(xdata, ncol)
+  rdim <- vapply(xdata, nrow, integer(1))
+  cdim <- vapply(xdata, ncol, integer(1))
   if (n1 < min(rdim) && merge.rows != "prefix") {
     warning("rows do not match")
   }
@@ -56,14 +56,14 @@ mofa.merge_data2 <- function(xdata, merge.rows = "prefix", merge.cols = "union")
   prefix.rows <- (merge.rows == "prefix")
   prefix.cols <- (merge.cols == "prefix")
   if (prefix.cols) {
-    for (i in 1:length(xdata)) {
+    for (i in seq_along(xdata)) {
       nn <- sub("^[A-Za-z]+:", "", colnames(xdata[[i]]))
       colnames(xdata[[i]]) <- paste0(names(xdata)[i], ":", nn)
     }
     merge.cols <- "union"
   }
   if (prefix.rows) {
-    for (i in 1:length(xdata)) {
+    for (i in seq_along(xdata)) {
       nn <- sub("^[A-Za-z]+:", "", rownames(xdata[[i]]))
       rownames(xdata[[i]]) <- paste0(names(xdata)[i], ":", nn)
     }
@@ -83,7 +83,7 @@ mofa.merge_data2 <- function(xdata, merge.rows = "prefix", merge.cols = "union")
   nn <- matrix(0, length(allfeatures), length(allsamples))
   rownames(D) <- allfeatures
   colnames(D) <- allsamples
-  for (i in 1:length(xdata)) {
+  for (i in seq_along(xdata)) {
     A <- xdata[[i]]
     ii <- match(rownames(D), rownames(A))
     jj <- match(colnames(D), colnames(A))
@@ -101,7 +101,7 @@ mofa.merge_data2 <- function(xdata, merge.rows = "prefix", merge.cols = "union")
 
 mofa.prefix <- function(xx) {
   xx <- mofa.strip_prefix(xx)
-  for (i in 1:length(xx)) {
+  for (i in seq_along(xx)) {
     dt <- paste0(names(xx)[i], ":")
     if (is.null(dim(xx[[i]]))) {
       names(xx[[i]]) <- paste0(dt, names(xx[[i]]))
@@ -135,7 +135,7 @@ mofa.strip_prefix <- function(xx) {
   }
 
   if (is.list(xx)) {
-    for (i in 1:length(xx)) {
+    for (i in seq_along(xx)) {
       dt <- paste0("^", names(xx)[i], ":")
       if (is.null(dim(xx[[i]]))) {
         names(xx[[i]]) <- sub(dt, "", names(xx[[i]]))
@@ -159,7 +159,7 @@ expandPhenoMatrix <- function(M, drop.ref = TRUE, keep.numeric = FALSE, check = 
 
   if (inherits(a1, "data.frame")) {
     a1.typed <- utils::type.convert(a1, as.is = TRUE)
-    y.class <- sapply(a1.typed, function(a) class(a)[1])
+    y.class <- vapply(a1.typed, function(a) class(a)[1], character(1))
   } else {
     a1.typed <- utils::type.convert(a1, as.is = TRUE)
     y.class <- apply(a1.typed, 2, function(a) class(a)[1])
@@ -185,7 +185,7 @@ expandPhenoMatrix <- function(M, drop.ref = TRUE, keep.numeric = FALSE, check = 
   a1.isnum <- y.isnum[kk]
 
   m1 <- list()
-  for (i in 1:ncol(a1)) {
+  for (i in seq_len(ncol(a1))) {
     if (a1.isnum[i]) {
       suppressWarnings(x <- as.numeric(a1[, i]))
       if (keep.numeric) {
@@ -218,7 +218,7 @@ expandPhenoMatrix <- function(M, drop.ref = TRUE, keep.numeric = FALSE, check = 
   }
 
   names(m1) <- colnames(a1)
-  for (i in 1:length(m1)) {
+  for (i in seq_along(m1)) {
     colnames(m1[[i]]) <- paste0(names(m1)[i], "=", colnames(m1[[i]]))
   }
   m1 <- do.call(cbind, m1)
@@ -253,15 +253,15 @@ makeContrastsFromLabelMatrix <- function(lab.matrix) {
   }
 
   ct.names <- colnames(lab.matrix)
-  main.grp <- sapply(strsplit(ct.names, split = "_vs_"), "[", 1)
-  ctrl.grp <- sapply(strsplit(ct.names, split = "_vs_"), "[", 2)
+  main.grp <- vapply(strsplit(ct.names, split = "_vs_"), "[", character(1), 1)
+  ctrl.grp <- vapply(strsplit(ct.names, split = "_vs_"), "[", character(1), 2)
   main.grp <- sub(".*:", "", main.grp)
   ctrl.grp <- sub("@.*", "", ctrl.grp)
 
   contr.mat <- matrix(0, nrow(lab.matrix), ncol(lab.matrix))
   rownames(contr.mat) <- rownames(lab.matrix)
   colnames(contr.mat) <- colnames(lab.matrix)
-  for (i in 1:ncol(lab.matrix)) {
+  for (i in seq_len(ncol(lab.matrix))) {
     lab1 <- trimws(lab.matrix[, i])
     lab1x <- setdiff(lab1, c(NA, ""))
     grps <- c(main.grp[i], ctrl.grp[i])
@@ -291,7 +291,7 @@ reverse.AvsB <- function(comp) {
     ab <- paste(rev(strsplit(comp0, split = "_vs_|_VS_")[[1]]), collapse = "_vs_")
     gsub("^:|@$", "", paste0(prefix, ":", ab, "@", postfix))
   }
-  as.character(sapply(comp, reverse.AvsB.1))
+  as.character(vapply(comp, reverse.AvsB.1, character(1)))
 }
 
 uscale <- function(x, symm = FALSE) {
