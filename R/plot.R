@@ -76,10 +76,10 @@ plot_multipartite <- function(graph,
 
   vattr <- igraph::vertex_attr_names(graph)
   edgeattr <- igraph::edge_attr_names(graph)
-  if (!"rho" %in% edgeattr) message("WARNING: no rho in edge attributes!")
-  if (!"weight" %in% edgeattr) message("WARNING: no weight in edge attributes!")
-  if (!"value" %in% vattr) stop("ERROR: no value in vertex attributes!")
-  if (!"layer" %in% vattr) stop("ERROR: no layer in vertex attributes!")
+  if (!"rho" %in% edgeattr) warning("no rho in edge attributes")
+  if (!"weight" %in% edgeattr) warning("no weight in edge attributes")
+  if (!"value" %in% vattr) stop("no value in vertex attributes")
+  if (!"layer" %in% vattr) stop("no layer in vertex attributes")
 
   if (!is.null(labels)) names(labels) <- igraph::V(graph)$name
   
@@ -95,8 +95,8 @@ plot_multipartite <- function(graph,
     prune = prune
   )
 
-  if (length(igraph::V(graph)) == 0) message("WARNING: graph has no nodes")
-  if (length(igraph::E(graph)) == 0) message("WARNING: graph has no edges")
+  if (length(igraph::V(graph)) == 0) warning("graph has no nodes")
+  if (length(igraph::E(graph)) == 0) warning("graph has no edges")
   
   layers <- graph$layers
   layers <- setdiff(layers, c("SOURCE", "SINK"))

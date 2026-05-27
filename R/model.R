@@ -58,8 +58,7 @@ create_model <- function(data,
     Y <- 1 * data$samples
   } else if (meta.type == "contrasts") {
     if (!"contrasts" %in% names(data)) {
-      message("ERROR: contrasts missing in data")
-      return(NULL)
+      stop("[create_model] 'contrasts' missing in data")
     }
     Y <- makeContrastsFromLabelMatrix(data$contrasts)
     Y <- sign(Y)
@@ -72,8 +71,7 @@ create_model <- function(data,
       Y <- cbind(Y, revY)
     }
   } else {
-    message("[create_model] ERROR invalid meta.type type")
-    return(NULL)
+    stop("[create_model] invalid 'meta.type': ", meta.type)
   }
   data$X[["PHENO"]] <- t(Y)
 
@@ -143,7 +141,7 @@ create_model <- function(data,
 
   ## reduce inter-connections to nc top most correlated edges per node
   if (!is.null(nc) && nc > 0) {
-    message(paste("reducing edges to maximum", nc, "connections"))
+    message("reducing edges to maximum ", nc, " connections")
     xtypes <- setdiff(layers, c("PHENO", "SOURCE", "SINK"))
     reduce_mask <- matrix(1, nrow(R), ncol(R))
     for (i in 1:(length(xtypes) - 1)) {

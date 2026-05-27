@@ -22,7 +22,7 @@ mofa.topSD <- function(xdata, ntop) {
       res <- head(xdata[order(-sdx), , drop = FALSE], ntop)
     }
   } else {
-    message("[mofa.topSD] WARNING: could not detect type")
+    warning("[mofa.topSD] could not detect type")
     res <- xdata
   }
   return(res)
@@ -48,10 +48,10 @@ mofa.merge_data2 <- function(xdata, merge.rows = "prefix", merge.cols = "union")
   rdim <- sapply(xdata, nrow)
   cdim <- sapply(xdata, ncol)
   if (n1 < min(rdim) && merge.rows != "prefix") {
-    message("WARNING: rows do not match")
+    warning("rows do not match")
   }
   if (n2 < min(cdim) && merge.cols != "prefix") {
-    message("WARNING: columns do not match")
+    warning("columns do not match")
   }
   prefix.rows <- (merge.rows == "prefix")
   prefix.cols <- (merge.cols == "prefix")
