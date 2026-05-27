@@ -1,0 +1,13 @@
+citHeader("To cite the lasagna package in publications use:")
+
+bibentry(
+  bibtype  = "Manual",
+  title    = "lasagna: Multi-Layer Graph Analysis for Multi-Omics Data",
+  author   = c(
+    person("Ivo", "Kwee"),
+    person("BigOmics Analytics SA")
+  ),
+  year     = "2026",
+  note     = paste("R package version", meta$Version),
+  url      = "https://github.com/bigomics/lasagna"
+)
