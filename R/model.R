@@ -6,7 +6,7 @@
 #' Edges weighted by correlation, optionally conditioned on phenotype.
 #' @param data A list with \code{X} (named list of data matrices),
 #'   \code{samples} (data frame), and optionally \code{contrasts}.
-#' @param pheno Phenotype type: \code{"pheno"}, \code{"expanded"},
+#' @param meta.type Phenotype type: \code{"pheno"}, \code{"expanded"},
 #'   or \code{"contrasts"}.
 #' @param ntop Number of top-SD features per layer. Set 0 or NULL
 #'   to keep all.

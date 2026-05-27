@@ -27,8 +27,13 @@
 #' @param strip.prefix Remove layer prefix from labels.
 #' @param strip.prefix2 Remove prefix with regex.
 #' @param prune Remove disconnected vertices.
+#' @param edge.gamma Gamma exponent applied to scaled edge widths.
+#' @param do.plot Logical; if \code{FALSE}, compute the layout without drawing.
+#' @param color.var Vertex colouring: \code{"value"} (by sign) or
+#'   \code{"color"} (use the vertex \code{color} attribute).
 #' @param layout Layout type: \code{"parallel"} or \code{"hive"}.
-#' @return Invisibly returns NULL. Called for side effect (plot).
+#' @return Invisibly, a list with the pruned \code{graph} and its
+#'   \code{layout} coordinate matrix. Called mainly for the plot side effect.
 #' @examples
 #' set.seed(1)
 #' gx <- matrix(rnorm(20 * 10), 20, 10,
@@ -234,6 +239,11 @@ plot_multipartite <- function(graph,
 #' @param mst Use minimum spanning tree layout.
 #' @param vcex Vertex size multiplier.
 #' @param ecex Edge width multiplier.
+#' @param egamma Gamma exponent applied to edge widths.
+#' @param color.var Vertex colouring: \code{"value"}, \code{"type"}/\code{"layer"},
+#'   or \code{"color"} (use the vertex \code{color} attribute).
+#' @param labcex Label size multiplier.
+#' @param layout Optional layout matrix (rows named by vertex).
 #' @param physics Enable physics simulation.
 #' @return A visNetwork widget.
 #' @examples
@@ -362,10 +372,17 @@ plot_visgraph <- function(graph,
 #' Wrapper that creates a 3D plotly visualization from a solved
 #' LASAGNA graph and precomputed 2D positions per layer.
 #' @param graph An igraph object (output of \code{solve}).
-#' @param pos Named list of 2-column position matrices per layer.
+#' @param layout Either a matrix/data frame with columns \code{x}, \code{y},
+#'   \code{z} (one row per vertex, row names matching vertex names), or a named
+#'   list of 2-column position matrices per layer.
 #' @param draw_edges Logical; draw inter-layer edges.
-#' @param min_rho Minimum absolute weight for edges.
 #' @param num_edges Maximum number of edges per layer pair.
+#' @param min_rho Minimum absolute weight for edges.
+#' @param sign_rho Which edge signs to draw: \code{"pos"}, \code{"neg"} or
+#'   \code{"both"}.
+#' @param cex Point size multiplier.
+#' @param cex.gamma Gamma exponent applied to point sizes.
+#' @param color.by Vertex colouring: \code{"value"} or \code{"color"}.
 #' @param znames Named character vector mapping layer codes to display names.
 #' @return A plotly object.
 #' @examples
