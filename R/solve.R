@@ -16,6 +16,18 @@
 #' @param sp.weight Use shortest-path weighting.
 #' @param graph Optional pre-existing graph to use instead of \code{obj$graph}.
 #' @return An igraph object with solved weights and node values.
+#' @examples
+#' set.seed(1)
+#' gx <- matrix(rnorm(20 * 10), 20, 10,
+#'   dimnames = list(paste0("g", 1:20), paste0("S", 1:10)))
+#' px <- matrix(rnorm(15 * 10), 15, 10,
+#'   dimnames = list(paste0("p", 1:15), paste0("S", 1:10)))
+#' samples <- data.frame(group = rep(c("A", "B"), each = 5),
+#'   row.names = paste0("S", 1:10))
+#' data <- list(X = list(gx = gx, px = px), samples = samples)
+#' model <- create_model(data, ntop = 10, nc = 5)
+#' g <- solve(model, pheno = colnames(model$Y)[1], max_edges = 50, prune = FALSE)
+#' igraph::vcount(g)
 #' @export
 solve <- function(obj,
                   pheno,
@@ -108,10 +120,10 @@ solve <- function(obj,
   if (max_edges > 0) {
     ewt <- igraph::E(graph)$weight
     esel <- tapply(
-      1:length(igraph::E(graph)), igraph::E(graph)$connection_type,
+      seq_along(igraph::E(graph)), igraph::E(graph)$connection_type,
       function(ii) utils::head(ii[order(-abs(ewt[ii]))], max_edges)
     )
-    dsel <- setdiff(1:length(igraph::E(graph)), unlist(esel))
+    dsel <- setdiff(seq_along(igraph::E(graph)), unlist(esel))
     igraph::E(graph)$weight[dsel] <- 0
   }
 
@@ -152,7 +164,7 @@ sp_edge_weight <- function(graph, layers) {
   )
 
   sp <- mapply(c, s1$epath, s2$epath)
-  sp.score <- sapply(sp, function(e) min(wt[e], na.rm = TRUE))
+  sp.score <- vapply(sp, function(e) min(wt[e], na.rm = TRUE), numeric(1))
 
   return(sp.score)
 
@@ -171,6 +183,18 @@ sp_edge_weight <- function(graph, layers) {
 #' @param prune Remove disconnected vertices.
 #' @param sp.weight Use shortest-path weighting.
 #' @return An igraph object representing the RMS consensus graph.
+#' @examples
+#' set.seed(1)
+#' gx <- matrix(rnorm(20 * 10), 20, 10,
+#'   dimnames = list(paste0("g", 1:20), paste0("S", 1:10)))
+#' px <- matrix(rnorm(15 * 10), 15, 10,
+#'   dimnames = list(paste0("p", 1:15), paste0("S", 1:10)))
+#' samples <- data.frame(group = rep(c("A", "B"), each = 5),
+#'   row.names = paste0("S", 1:10))
+#' data <- list(X = list(gx = gx, px = px), samples = samples)
+#' model <- create_model(data, ntop = 10, nc = 5)
+#' g <- multisolve(model, min_rho = 0, prune = FALSE)
+#' igraph::ecount(g)
 #' @export
 multisolve <- function(obj,
                        min_rho = 0.2,

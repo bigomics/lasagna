@@ -6,7 +6,7 @@
 #' Edges weighted by correlation, optionally conditioned on phenotype.
 #' @param data A list with \code{X} (named list of data matrices),
 #'   \code{samples} (data frame), and optionally \code{contrasts}.
-#' @param pheno Phenotype type: \code{"pheno"}, \code{"expanded"},
+#' @param meta.type Phenotype type: \code{"pheno"}, \code{"expanded"},
 #'   or \code{"contrasts"}.
 #' @param ntop Number of top-SD features per layer. Set 0 or NULL
 #'   to keep all.
@@ -27,6 +27,17 @@
 #'   \item{Y}{Phenotype matrix.}
 #'   \item{layers}{Character vector of layer names.}
 #' }
+#' @examples
+#' set.seed(1)
+#' gx <- matrix(rnorm(20 * 10), 20, 10,
+#'   dimnames = list(paste0("g", 1:20), paste0("S", 1:10)))
+#' px <- matrix(rnorm(15 * 10), 15, 10,
+#'   dimnames = list(paste0("p", 1:15), paste0("S", 1:10)))
+#' samples <- data.frame(group = rep(c("A", "B"), each = 5),
+#'   row.names = paste0("S", 1:10))
+#' data <- list(X = list(gx = gx, px = px), samples = samples)
+#' model <- create_model(data, ntop = 10, nc = 5)
+#' model$layers
 #' @export
 create_model <- function(data,
                          X = NULL,
@@ -53,7 +64,7 @@ create_model <- function(data,
       meta <- data$contrasts
     }
   }
-
+  
   if(is.null(data) && (is.null(X) || is.null(meta)) ) {
     stop("must supply data or {X, meta}.")
   }
@@ -74,8 +85,7 @@ create_model <- function(data,
       Y <- cbind(Y, revY)
     }
   } else {
-    message("[create_model] ERROR invalid meta.type type")
-    return(NULL)
+    stop("[create_model] invalid 'meta.type': ", meta.type)
   }
   X[["PHENO"]] <- t(Y)
 
@@ -129,14 +139,14 @@ create_model <- function(data,
   if (!fully_connect) {
     layer_mask <- matrix(0, nrow(R), ncol(R))
     dimnames(layer_mask) <- dimnames(R)
-    for (i in 1:(length(layers) - 1)) {
+    for (i in seq_len(length(layers) - 1)) {
       ii <- which(dt == layers[i])
       jj <- which(dt == layers[i + 1])
       layer_mask[ii, jj] <- 1
       layer_mask[jj, ii] <- 1
     }
     if (intra) {
-      for (i in 1:length(layers)) {
+      for (i in seq_along(layers)) {
         ii <- which(dt == layers[i])
         layer_mask[ii, ii] <- 1
       }
@@ -146,10 +156,10 @@ create_model <- function(data,
 
   ## reduce inter-connections to nc top most correlated edges per node
   if (!is.null(nc) && nc > 0) {
-    message(paste("reducing edges to maximum", nc, "connections"))
+    message("reducing edges to maximum ", nc, " connections")
     xtypes <- setdiff(layers, c("PHENO", "SOURCE", "SINK"))
     reduce_mask <- matrix(1, nrow(R), ncol(R))
-    for (i in 1:(length(xtypes) - 1)) {
+    for (i in seq_len(length(xtypes) - 1)) {
       ii <- which(dt == xtypes[i])
       jj <- which(dt == xtypes[i + 1])
       R1 <- R[ii, jj, drop = FALSE]
@@ -160,7 +170,7 @@ create_model <- function(data,
       reduce_mask[jj, ii] <- t(rr)
     }
     if (intra) {
-      for (i in 1:length(xtypes)) {
+      for (i in seq_along(xtypes)) {
         ii <- which(dt == xtypes[i])
         R1 <- R[ii, ii, drop = FALSE]
         rii <- apply(abs(R1), 1, function(r) utils::tail(sort(r), nc)[1])

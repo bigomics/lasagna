@@ -127,14 +127,14 @@ vis %>% visHierarchicalLayout()
 ##source("~/Playground/playbase/dev/include.R", chdir=TRUE)
 load_all("..")
 
-xpos <- layout_multipartite_3d(graph, obj$X, clust='svd')
+#xpos <- layout_multipartite_3d(graph, obj$X, clust='svd')
 xpos <- layout_multipartite_3d(graph, obj$X, clust='tsne')
-xpos <- layout_multipartite_3d(graph, obj$X, clust='umap')
+#xpos <- layout_multipartite_3d(graph, obj$X, clust='umap')
 head(xpos)
 
 plot_3d(graph, layout=xpos, draw_edges=TRUE,
-  color.by="color", min_rho=0.0, sign_rho="pos",
-  cex=0.5, cex.gamma=0.5, num_edges=200, znames=NULL) 
+  color.by="color", min_rho=0.0, sign_rho="both",
+  cex=0.9, cex.gamma=0.5, num_edges=200, znames=NULL) 
   
 ##-------------------------------------------------
 ##-------------------------------------------------

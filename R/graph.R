@@ -18,6 +18,19 @@
 #' @param select Character vector of node names to select.
 #' @param prune Remove disconnected vertices.
 #' @return A pruned igraph object.
+#' @examples
+#' set.seed(1)
+#' gx <- matrix(rnorm(20 * 10), 20, 10,
+#'   dimnames = list(paste0("g", 1:20), paste0("S", 1:10)))
+#' px <- matrix(rnorm(15 * 10), 15, 10,
+#'   dimnames = list(paste0("p", 1:15), paste0("S", 1:10)))
+#' samples <- data.frame(group = rep(c("A", "B"), each = 5),
+#'   row.names = paste0("S", 1:10))
+#' data <- list(X = list(gx = gx, px = px), samples = samples)
+#' model <- create_model(data, ntop = 10, nc = 5)
+#' g <- solve(model, pheno = colnames(model$Y)[1], prune = FALSE)
+#' pruned <- prune_graph(g, ntop = 5, min.rho = 0)
+#' igraph::vcount(pruned)
 #' @export
 prune_graph <- function(graph,
                         ntop = 100,
@@ -63,7 +76,7 @@ prune_graph <- function(graph,
   names(fc) <- igraph::V(graph)$name
   if (!is.null(ntop) && ntop > 0) {
     ii <- tapply(
-      1:length(fc), igraph::V(graph)$layer,
+      seq_along(fc), igraph::V(graph)$layer,
       function(i) utils::head(i[order(-abs(fc[i]))], ntop)
     )
     ii <- unlist(ii[names(ii) %in% layers])

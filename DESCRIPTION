@@ -1,29 +1,39 @@
 Package: lasagna
 Type: Package
 Title: Multi-Layer Graph Analysis for Multi-Omics Data
-Version: 0.1.0
-Author: BigOmics Analytics SA
-Maintainer: Ivo Kwee <ivo.kwee@bigomics.com>
+Version: 0.99.0
+Authors@R: c(
+    person("Ivo", "Kwee", email = "ivo.kwee@bigomics.com",
+           role = c("aut", "cre")),
+    person("BigOmics Analytics SA", role = c("cph", "fnd")))
 Description: LASAGNA (multi-layer graph analysis) builds multi-partite
     graphs from multi-omics data layers and solves for condition-specific
-    subnetworks. Supports interactive 3D visualization with plotly,
-    visNetwork, and grimon.
-License: Dual Commercial and Non-Commercial
+    subnetworks. Edges between layers are weighted by feature-feature
+    correlation and can be conditioned on a phenotype of interest. The
+    package provides interactive 2D and 3D visualisations of the resulting
+    networks using plotly and visNetwork.
+License: MIT + file LICENSE
 Encoding: UTF-8
-Depends: R (>= 3.5)
+URL: https://github.com/bigomics/lasagna
+BugReports: https://github.com/bigomics/lasagna/issues
+biocViews: Software, GraphAndNetwork, Network, Visualization,
+    GeneExpression, DifferentialExpression, Transcriptomics, Proteomics
+RoxygenNote: 7.3.3
+Depends: R (>= 4.3.0)
 Imports:
     igraph,
     plotly,
     visNetwork,
-    grimon,
-    gplots,
     matrixStats,
     stats,
     utils,
-    methods,
     grDevices,
     graphics
 Suggests:
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown,
+    BiocStyle
+VignetteBuilder: knitr
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.0.0

@@ -27,8 +27,25 @@
 #' @param strip.prefix Remove layer prefix from labels.
 #' @param strip.prefix2 Remove prefix with regex.
 #' @param prune Remove disconnected vertices.
+#' @param edge.gamma Gamma exponent applied to scaled edge widths.
+#' @param do.plot Logical; if \code{FALSE}, compute the layout without drawing.
+#' @param color.var Vertex colouring: \code{"value"} (by sign) or
+#'   \code{"color"} (use the vertex \code{color} attribute).
 #' @param layout Layout type: \code{"parallel"} or \code{"hive"}.
-#' @return Invisibly returns NULL. Called for side effect (plot).
+#' @return Invisibly, a list with the pruned \code{graph} and its
+#'   \code{layout} coordinate matrix. Called mainly for the plot side effect.
+#' @examples
+#' set.seed(1)
+#' gx <- matrix(rnorm(20 * 10), 20, 10,
+#'   dimnames = list(paste0("g", 1:20), paste0("S", 1:10)))
+#' px <- matrix(rnorm(15 * 10), 15, 10,
+#'   dimnames = list(paste0("p", 1:15), paste0("S", 1:10)))
+#' samples <- data.frame(group = rep(c("A", "B"), each = 5),
+#'   row.names = paste0("S", 1:10))
+#' data <- list(X = list(gx = gx, px = px), samples = samples)
+#' model <- create_model(data, ntop = 10, nc = 5)
+#' g <- solve(model, pheno = colnames(model$Y)[1], prune = FALSE)
+#' mp <- plot_multipartite(g, min.rho = 0, ntop = 10)
 #' @export
 plot_multipartite <- function(graph,
                               layers = NULL,
@@ -60,10 +77,10 @@ plot_multipartite <- function(graph,
 
   vattr <- igraph::vertex_attr_names(graph)
   edgeattr <- igraph::edge_attr_names(graph)
-  if (!"rho" %in% edgeattr) message("WARNING: no rho in edge attributes!")
-  if (!"weight" %in% edgeattr) message("WARNING: no weight in edge attributes!")
-  if (!"value" %in% vattr) stop("ERROR: no value in vertex attributes!")
-  if (!"layer" %in% vattr) stop("ERROR: no layer in vertex attributes!")
+  if (!"rho" %in% edgeattr) warning("no rho in edge attributes")
+  if (!"weight" %in% edgeattr) warning("no weight in edge attributes")
+  if (!"value" %in% vattr) stop("no value in vertex attributes")
+  if (!"layer" %in% vattr) stop("no layer in vertex attributes")
 
   if (!is.null(labels)) names(labels) <- igraph::V(graph)$name
   
@@ -79,8 +96,8 @@ plot_multipartite <- function(graph,
     prune = prune
   )
 
-  if (length(igraph::V(graph)) == 0) message("WARNING: graph has no nodes")
-  if (length(igraph::E(graph)) == 0) message("WARNING: graph has no edges")
+  if (length(igraph::V(graph)) == 0) warning("graph has no nodes")
+  if (length(igraph::E(graph)) == 0) warning("graph has no edges")
   
   layers <- graph$layers
   layers <- setdiff(layers, c("SOURCE", "SINK"))
@@ -163,7 +180,7 @@ plot_multipartite <- function(graph,
     y <- layout.xy[, 2]
   
     ## titles
-    for (i in 1:length(layers)) {
+    for (i in seq_along(layers)) {
       grp1 <- layers[i]
       y1 <- y[which(vlayer == grp1)]
       graphics::text(xpos[i], max(y1), grp1, font = 2, cex = 1.25, pos = 3, adj = 0, offset = 1.3)
@@ -181,7 +198,7 @@ plot_multipartite <- function(graph,
       value.name <- graph$value.type
     }
     if (is.null(value.name)) value.name <- "value"
-    for (i in 1:length(layers)) {
+    for (i in seq_along(layers)) {
       tpos <- labpos[i]
       if (layers[i] == "PHENO") next
       graphics::text(xpos[i], -0.02, value.name,
@@ -224,8 +241,25 @@ plot_multipartite <- function(graph,
 #' @param mst Use minimum spanning tree layout.
 #' @param vcex Vertex size multiplier.
 #' @param ecex Edge width multiplier.
+#' @param egamma Gamma exponent applied to edge widths.
+#' @param color.var Vertex colouring: \code{"value"}, \code{"type"}/\code{"layer"},
+#'   or \code{"color"} (use the vertex \code{color} attribute).
+#' @param labcex Label size multiplier.
+#' @param layout Optional layout matrix (rows named by vertex).
 #' @param physics Enable physics simulation.
 #' @return A visNetwork widget.
+#' @examples
+#' set.seed(1)
+#' gx <- matrix(rnorm(20 * 10), 20, 10,
+#'   dimnames = list(paste0("g", 1:20), paste0("S", 1:10)))
+#' px <- matrix(rnorm(15 * 10), 15, 10,
+#'   dimnames = list(paste0("p", 1:15), paste0("S", 1:10)))
+#' samples <- data.frame(group = rep(c("A", "B"), each = 5),
+#'   row.names = paste0("S", 1:10))
+#' data <- list(X = list(gx = gx, px = px), samples = samples)
+#' model <- create_model(data, ntop = 10, nc = 5)
+#' g <- solve(model, pheno = colnames(model$Y)[1], prune = FALSE)
+#' vis <- plot_visgraph(g, min_rho = 0, ntop = 20)
 #' @export
 plot_visgraph <- function(graph,
                           layers = NULL,
@@ -341,12 +375,37 @@ plot_visgraph <- function(graph,
 #' Wrapper that creates a 3D plotly visualization from a solved
 #' LASAGNA graph and precomputed 2D positions per layer.
 #' @param graph An igraph object (output of \code{solve}).
-#' @param pos Named list of 2-column position matrices per layer.
+#' @param layout Either a matrix/data frame with columns \code{x}, \code{y},
+#'   \code{z} (one row per vertex, row names matching vertex names), or a named
+#'   list of 2-column position matrices per layer.
 #' @param draw_edges Logical; draw inter-layer edges.
-#' @param min_rho Minimum absolute weight for edges.
 #' @param num_edges Maximum number of edges per layer pair.
+#' @param min_rho Minimum absolute weight for edges.
+#' @param sign_rho Which edge signs to draw: \code{"pos"}, \code{"neg"} or
+#'   \code{"both"}.
+#' @param cex Point size multiplier.
+#' @param cex.gamma Gamma exponent applied to point sizes.
+#' @param color.by Vertex colouring: \code{"value"} or \code{"color"}.
 #' @param znames Named character vector mapping layer codes to display names.
 #' @return A plotly object.
+#' @examples
+#' set.seed(1)
+#' gx <- matrix(rnorm(20 * 10), 20, 10,
+#'   dimnames = list(paste0("g", 1:20), paste0("S", 1:10)))
+#' px <- matrix(rnorm(15 * 10), 15, 10,
+#'   dimnames = list(paste0("p", 1:15), paste0("S", 1:10)))
+#' samples <- data.frame(group = rep(c("A", "B"), each = 5),
+#'   row.names = paste0("S", 1:10))
+#' data <- list(X = list(gx = gx, px = px), samples = samples)
+#' model <- create_model(data, ntop = 10, nc = 5)
+#' g <- solve(model, pheno = colnames(model$Y)[1], prune = FALSE)
+#' ## build a simple per-layer 3D layout (random x/y, z = layer)
+#' vn <- igraph::V(g)$name
+#' layout <- data.frame(
+#'   x = runif(length(vn)), y = runif(length(vn)),
+#'   z = sub(":.*", "", vn),
+#'   row.names = sub(".*:", "", vn))
+#' fig <- plot_3d(g, layout = layout, num_edges = 20, min_rho = 0)
 #' @export
 plot_3d <- function(graph,
                     layout = NULL,
@@ -487,6 +546,15 @@ plot_3d <- function(graph,
 #' @param cex Point size multiplier.
 #' @param edges Optional data frame of edges.
 #' @return A plotly object.
+#' @examples
+#' set.seed(1)
+#' df <- data.frame(
+#'   feature = paste0("f", 1:10),
+#'   x = runif(10), y = runif(10),
+#'   z = rep(c("gx", "px"), each = 5),
+#'   color = rnorm(10), size = runif(10),
+#'   text = paste0("f", 1:10))
+#' fig <- plotlyLasagna(df)
 #' @export
 plotlyLasagna <- function(df,
                           znames = NULL, ax = 1,
@@ -513,7 +581,7 @@ plotlyLasagna <- function(df,
 
   fig <- plotly::plot_ly()
 
-  for (k in 1:length(zz)) {
+  for (k in seq_along(zz)) {
     z <- zz[k]
     df1 <- df[which(df$z == z), c("x", "y", "z", "color", "size", "text")]
 
@@ -567,7 +635,6 @@ plotlyLasagna <- function(df,
         dfe$pair_id <- as.vector(mapply(rep, 1:nrow(ee), 2))
         cc <- edge_colors[1 + (ee[, 3] > 0)]
         dfe$col <- as.vector(mapply(rep, cc, 2))
-        
         fig <- fig %>%
           plotly::add_trace(
             x = dfe$x,
@@ -656,7 +723,7 @@ layout_hiveplot <- function(graph) {
   rownames(layout.xy) <- igraph::V(graph)$name
   fc <- igraph::V(graph)$value  
   names(fc) <- igraph::V(graph)$name
-  for (i in 1:length(layers)) {
+  for (i in seq_along(layers)) {
     ii <- which(vlayer == layers[i])
     vv <- igraph::V(graph)[ii]
     phi <- pi / 2 + i * 2 * pi / nlayers
