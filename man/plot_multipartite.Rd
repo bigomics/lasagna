@@ -2,7 +2,9 @@
 % Please edit documentation in R/plot.R
 \name{plot_multipartite}
 \alias{plot_multipartite}
-\title{Plot multi-partite graph using base R graphics}
+\title{Plot multi-partite graph using base R graphics
+Draws a multi-layer LASAGNA graph as a parallel coordinate-style
+layout using base R \code{igraph::plot}.}
 \usage{
 plot_multipartite(
   graph,
@@ -18,6 +20,7 @@ plot_multipartite(
   edge.cex = 1,
   edge.alpha = 0.33,
   edge.gamma = 2,
+  edge.colors = c("blue3", "magenta4"),
   xdist = 1,
   normalize.edges = FALSE,
   yheight = 0.85,
@@ -85,6 +88,7 @@ plot_multipartite(
 Invisibly returns NULL. Called for side effect (plot).
 }
 \description{
+Plot multi-partite graph using base R graphics
 Draws a multi-layer LASAGNA graph as a parallel coordinate-style
 layout using base R \code{igraph::plot}.
 }

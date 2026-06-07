@@ -2,7 +2,10 @@
 % Please edit documentation in R/solve.R
 \name{solve}
 \alias{solve}
-\title{Solve LASAGNA graph for a single phenotype}
+\title{Solve LASAGNA graph for a single phenotype
+Given a LASAGNA model and a phenotype (column of Y), computes
+per-node fold change and correlation, then weights edges accordingly.
+The resulting graph is pruned to \code{max_edges} per connection type.}
 \usage{
 solve(
   obj,
@@ -17,8 +20,7 @@ solve(
 )
 }
 \arguments{
-\item{obj}{A LASAGNA model (output of
-\code{create_model}).}
+\item{obj}{A LASAGNA model (output of \code{create_model}).}
 
 \item{pheno}{Column name in \code{obj$Y} to solve for.}
 
@@ -34,15 +36,14 @@ solve(
 
 \item{sp.weight}{Use shortest-path weighting.}
 
-\item{graph}{Optional pre-existing graph to use instead of
-\code{obj$graph}.}
+\item{graph}{Optional pre-existing graph to use instead of \code{obj$graph}.}
 }
 \value{
 An igraph object with solved weights and node values.
 }
 \description{
+Solve LASAGNA graph for a single phenotype
 Given a LASAGNA model and a phenotype (column of Y), computes
-per-node fold change and correlation, then weights edges
-accordingly. The resulting graph is pruned to \code{max_edges}
-per connection type.
+per-node fold change and correlation, then weights edges accordingly.
+The resulting graph is pruned to \code{max_edges} per connection type.
 }

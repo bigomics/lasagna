@@ -10,7 +10,6 @@ Description: LASAGNA (multi-layer graph analysis) builds multi-partite
     visNetwork, and grimon.
 License: Dual Commercial and Non-Commercial
 Encoding: UTF-8
-RoxygenNote: 7.3.3
 Depends: R (>= 3.5)
 Imports:
     igraph,
@@ -27,3 +26,4 @@ Imports:
 Suggests:
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
+Config/roxygen2/version: 8.0.0

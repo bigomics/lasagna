@@ -2,13 +2,21 @@
 % Please edit documentation in R/plot.R
 \name{plotlyLasagna}
 \alias{plotlyLasagna}
-\title{Internal plotly builder for LASAGNA 3D plot}
+\title{Internal plotly builder for LASAGNA 3D plot
+Builds the actual plotly figure from a prepared data frame.}
 \usage{
-plotlyLasagna(df, znames = NULL, cex = 1, edges = NULL)
+plotlyLasagna(
+  df,
+  znames = NULL,
+  ax = 1,
+  cex = 1,
+  edge.cex = 1,
+  edges = NULL,
+  edge_colors = c("blue", "magenta")
+)
 }
 \arguments{
-\item{df}{Data frame with columns: feature, x, y, z, color,
-text.}
+\item{df}{Data frame with columns: feature, x, y, z, color, text.}
 
 \item{znames}{Named character vector for layer display names.}
 
@@ -20,5 +28,6 @@ text.}
 A plotly object.
 }
 \description{
+Internal plotly builder for LASAGNA 3D plot
 Builds the actual plotly figure from a prepared data frame.
 }

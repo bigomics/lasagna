@@ -2,7 +2,10 @@
 % Please edit documentation in R/graph.R
 \name{prune_graph}
 \alias{prune_graph}
-\title{Prune a solved LASAGNA graph}
+\title{Prune a solved LASAGNA graph
+Filters vertices and edges by layer, node value, edge weight,
+edge sign, and edge type (inter vs intra). Useful for reducing
+graph complexity before visualization.}
 \usage{
 prune_graph(
   graph,
@@ -18,17 +21,13 @@ prune_graph(
 )
 }
 \arguments{
-\item{graph}{An igraph object (output of \code{solve}
-or \code{multisolve}).}
+\item{graph}{An igraph object (output of \code{solve} or \code{multisolve}).}
 
-\item{ntop}{Number of top features per layer (by absolute
-value).}
+\item{ntop}{Number of top features per layer (by absolute value).}
 
-\item{layers}{Character vector of layers to keep. If NULL, uses
-all.}
+\item{layers}{Character vector of layers to keep. If NULL, uses all.}
 
-\item{normalize.edges}{Normalize edge weights per connection
-type.}
+\item{normalize.edges}{Normalize edge weights per connection type.}
 
 \item{min.rho}{Minimum absolute edge weight.}
 
@@ -48,6 +47,7 @@ type.}
 A pruned igraph object.
 }
 \description{
+Prune a solved LASAGNA graph
 Filters vertices and edges by layer, node value, edge weight,
 edge sign, and edge type (inter vs intra). Useful for reducing
 graph complexity before visualization.

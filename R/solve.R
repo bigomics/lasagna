@@ -185,6 +185,7 @@ multisolve <- function(obj,
   traits <- intersect(traits, colnames(obj$Y))
 
   M <- list()
+  V <- list()
   for (ct in traits) {
     solved <- solve(obj,
       pheno = ct,
@@ -197,19 +198,24 @@ multisolve <- function(obj,
     )
     adj <- igraph::as_adjacency_matrix(solved, attr = "weight")
     M[[ct]] <- adj
+    V[[ct]] <- igraph::V(solved)$value
+    names(V[[ct]]) <- igraph::V(solved)$name
   }
 
   ## RMS adjacency matrix as consensus solution
   M <- lapply(M, function(mat) as.matrix(mat^2))
   avgM <- sqrt(Reduce("+", M) / length(M))
   avgM <- avgM * (avgM > min_rho)
-
+  rmsV <- rowMeans(do.call(cbind, V)**2)
+  
   gr <- obj$graph
+  igraph::V(gr)$value <- rmsV
+  
   ee <- igraph::get.edges(gr, igraph::E(gr))
   igraph::E(gr)$weight <- sign(igraph::E(gr)$weight) * avgM[ee]
   del.ee <- which(abs(igraph::E(gr)$weight) < min_rho)
   gr <- igraph::delete_edges(gr, del.ee)
-
+  
   if (prune) {
     del.vv <- which(igraph::degree(gr) == 0)
     gr <- igraph::delete_vertices(gr, del.vv)

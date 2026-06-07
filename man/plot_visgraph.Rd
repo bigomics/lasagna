@@ -14,6 +14,7 @@ plot_visgraph(
   ecex = 1,
   egamma = 1,
   color.var = "value",
+  edge.colors = c("blue", "purple"),
   labcex = 1,
   layout = NULL,
   physics = TRUE

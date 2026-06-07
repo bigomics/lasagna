@@ -2,24 +2,29 @@
 % Please edit documentation in R/plot.R
 \name{plot_3d}
 \alias{plot_3d}
-\title{Plot LASAGNA graph in 3D using plotly}
+\title{Plot LASAGNA graph in 3D using plotly
+Wrapper that creates a 3D plotly visualization from a solved
+LASAGNA graph and precomputed 2D positions per layer.}
 \usage{
 plot_3d(
   graph,
-  layout,
+  layout = NULL,
+  X = NULL,
   draw_edges = TRUE,
   num_edges = 40,
   min_rho = 0.1,
-  sign_rho = c("pos", "both")[1],
+  sign_rho = c("both", "pos", "neg")[1],
   cex = 1,
   cex.gamma = 1,
+  edge.cex = 1,
   color.by = "value",
-  znames = NULL
+  edge_colors = c("blue", "magenta"),
+  znames = NULL,
+  ax = 0
 )
 }
 \arguments{
-\item{graph}{An igraph object (output of
-\code{solve}).}
+\item{graph}{An igraph object (output of \code{solve}).}
 
 \item{draw_edges}{Logical; draw inter-layer edges.}
 
@@ -27,8 +32,7 @@ plot_3d(
 
 \item{min_rho}{Minimum absolute weight for edges.}
 
-\item{znames}{Named character vector mapping layer codes to
-display names.}
+\item{znames}{Named character vector mapping layer codes to display names.}
 
 \item{pos}{Named list of 2-column position matrices per layer.}
 }
@@ -36,6 +40,7 @@ display names.}
 A plotly object.
 }
 \description{
+Plot LASAGNA graph in 3D using plotly
 Wrapper that creates a 3D plotly visualization from a solved
 LASAGNA graph and precomputed 2D positions per layer.
 }

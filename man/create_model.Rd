@@ -2,10 +2,14 @@
 % Please edit documentation in R/model.R
 \name{create_model}
 \alias{create_model}
-\title{Create LASAGNA multi-layer graph model}
+\title{Create LASAGNA multi-layer graph model
+Builds a multi-partite graph from multi-omics data layers.
+Edges weighted by correlation, optionally conditioned on phenotype.}
 \usage{
 create_model(
   data,
+  X = NULL,
+  meta = NULL,
   meta.type = "pheno",
   ntop = 1000,
   nc = 20,
@@ -58,7 +62,7 @@ A list with components:
 }
 }
 \description{
+Create LASAGNA multi-layer graph model
 Builds a multi-partite graph from multi-omics data layers.
-Edges are weighted by correlation, optionally conditioned on
-phenotype.
+Edges weighted by correlation, optionally conditioned on phenotype.
 }

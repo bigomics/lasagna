@@ -29,6 +29,8 @@
 #' }
 #' @export
 create_model <- function(data,
+                         X = NULL,
+                         meta = NULL,
                          meta.type = "pheno",
                          ntop = 1000,
                          nc = 20,
@@ -40,17 +42,28 @@ create_model <- function(data,
                          fully_connect = FALSE,
                          add.revpheno = TRUE,
                          condition.edges = TRUE) {
-
-  if (meta.type %in% c("pheno","samples")) {
-    Y <- expandPhenoMatrix(data$samples, drop.ref = FALSE)
-  } else if (meta.type %in% c("expanded","traits")) {
-    Y <- 1 * data$samples
-  } else if (meta.type == "contrasts") {
-    if (!"contrasts" %in% names(data)) {
-      message("ERROR: contrasts missing in data")
-      return(NULL)
+  
+  if(!is.null(data)) {
+    X <- data$X
+    meta <- data$samples
+    if (meta.type == "contrasts") {
+      if (!"contrasts" %in% names(data)) {
+        stop("ERROR: contrasts missing in data")
+      }
+      meta <- data$contrasts
     }
-    Y <- makeContrastsFromLabelMatrix(data$contrasts)
+  }
+
+  if(is.null(data) && (is.null(X) || is.null(meta)) ) {
+    stop("must supply data or {X, meta}.")
+  }
+  
+  if (meta.type %in% c("pheno","samples")) {
+    Y <- expandPhenoMatrix(meta, drop.ref = FALSE)
+  } else if (meta.type %in% c("expanded","traits")) {
+    Y <- 1 * meta
+  } else if (meta.type == "contrasts") {
+    Y <- makeContrastsFromLabelMatrix(meta)
     Y <- sign(Y)
     if (any(grepl("^IA:", colnames(Y)))) {
       Y <- Y[, grep("^IA:", colnames(Y), invert = TRUE), drop = FALSE]
@@ -64,26 +77,27 @@ create_model <- function(data,
     message("[create_model] ERROR invalid meta.type type")
     return(NULL)
   }
-  data$X[["PHENO"]] <- t(Y)
+  X[["PHENO"]] <- t(Y)
 
   ## restrict number of features (by SD) if requested
-  xx <- data$X
+  xx <- X
+  xx <- lapply(xx, as.matrix)
   if (!is.null(ntop) && ntop > 0) {
     xx <- lapply(xx, function(x) head(x[order(-apply(x, 1, stats::sd)), , drop = FALSE], ntop))
     xx <- mofa.topSD(xx, ntop)
   }
 
   ## merge data (handles non-matching samples)
-  X <- mofa.merge_data2(xx, merge.rows = "prefix", merge.cols = "union")
-  kk <- intersect(colnames(X), rownames(Y))
-  X <- X[, kk]
+  xx <- mofa.merge_data2(xx, merge.rows = "prefix", merge.cols = "union")
+  kk <- intersect(colnames(xx), rownames(Y))
+  xx <- xx[, kk]
   Y <- Y[kk, ]
 
   ## add SOURCE/SINK
-  if (add.sink) X <- rbind(X, "SOURCE" = 1, "SINK" = 1)
+  if (add.sink) xx <- rbind(xx, "SOURCE" = 1, "SINK" = 1)
 
   ## compute correlation matrix
-  suppressWarnings(R <- stats::cor(t(X), use = "pairwise"))
+  suppressWarnings(R <- stats::cor(t(xx), use = "pairwise"))
 
   ## SOURCE/SINK fully connected
   ii <- grep("SINK|SOURCE", rownames(R))
@@ -93,12 +107,12 @@ create_model <- function(data,
   }
 
   R0 <- R
-  R[is.na(R)] <- 0.1234 ## replace NA with constant
+  R[is.na(R)] <- 0.01234 ## replace NA with small constant????
 
   ## condition edges by phenotype correlation
   if (condition.edges) {
     message("conditioning edges...")
-    rho <- stats::cor(t(X), Y, use = "pairwise.complete.obs")
+    rho <- stats::cor(t(xx), Y, use = "pairwise.complete.obs")
     maxrho <- apply(abs(rho), 1, max, na.rm = TRUE)
     ii <- grep("SINK|SOURCE", names(maxrho))
     if (length(ii)) maxrho[ii] <- 1
@@ -108,7 +122,7 @@ create_model <- function(data,
 
   ## define layers
   dt <- sub(":.*", "", rownames(R))
-  layers <- names(data$X)
+  layers <- names(X)
   if (add.sink) layers <- c("SOURCE", layers, "SINK")
 
   ## mask for inter-layer connections
@@ -181,6 +195,6 @@ create_model <- function(data,
   ii <- which(etype1 == etype2)
   if (length(ii)) igraph::E(gr)$connection_type[ii] <- etype1[ii]
 
-  return(list(graph = gr, X = X, Y = Y, layers = layers))
+  return(list(graph = gr, X = xx, Y = Y, layers = layers))
 
 }

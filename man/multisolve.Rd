@@ -2,7 +2,9 @@
 % Please edit documentation in R/solve.R
 \name{multisolve}
 \alias{multisolve}
-\title{Solve LASAGNA graph for multiple phenotypes}
+\title{Solve LASAGNA graph for multiple phenotypes
+Solves the graph iteratively for multiple contrasts and returns
+the root-mean-square (RMS) consensus graph.}
 \usage{
 multisolve(
   obj,
@@ -18,8 +20,7 @@ multisolve(
 \arguments{
 \item{obj}{A LASAGNA model.}
 
-\item{min_rho}{Minimum absolute weight threshold for final
-graph.}
+\item{min_rho}{Minimum absolute weight threshold for final graph.}
 
 \item{traits}{Character vector of trait names (columns of Y). If
 NULL, all traits are used.}
@@ -38,6 +39,7 @@ NULL, all traits are used.}
 An igraph object representing the RMS consensus graph.
 }
 \description{
+Solve LASAGNA graph for multiple phenotypes
 Solves the graph iteratively for multiple contrasts and returns
 the root-mean-square (RMS) consensus graph.
 }
