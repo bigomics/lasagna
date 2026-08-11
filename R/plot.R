@@ -421,8 +421,6 @@ plot_3d <- function(graph,
                     color.by = "value",
                     edge_colors = c("blue", "magenta"),
                     znames = NULL, ax=0) {
-  require(plotly)
-  
   edges <- NULL
   if (draw_edges) {
     edges <- data.frame(igraph::as_edgelist(graph),
@@ -563,8 +561,6 @@ plotlyLasagna <- function(df,
                           edges = NULL,
                           edge_colors = c("blue", "magenta")
                           ) {
-  require(plotly)
-
   zz <- sort(unique(df$z))
   min.x <- min(df$x, na.rm = TRUE)
   max.x <- max(df$x, na.rm = TRUE)
