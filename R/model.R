@@ -143,11 +143,13 @@ create_model <- function(data,
   if (!fully_connect) {
     layer_mask <- matrix(0, nrow(R), ncol(R))
     dimnames(layer_mask) <- dimnames(R)
-    for (i in seq_len(length(layers) - 1)) {
-      ii <- which(dt == layers[i])
-      jj <- which(dt == layers[i + 1])
-      layer_mask[ii, jj] <- 1
-      layer_mask[jj, ii] <- 1
+    if (length(layers) >= 2) {
+      for (i in seq_len(length(layers) - 1)) {
+        ii <- which(dt == layers[i])
+        jj <- which(dt == layers[i + 1])
+        layer_mask[ii, jj] <- 1
+        layer_mask[jj, ii] <- 1
+      }
     }
     if (intra) {
       for (i in seq_along(layers)) {
@@ -163,15 +165,17 @@ create_model <- function(data,
     message("reducing edges to maximum ", nc, " connections")
     xtypes <- setdiff(layers, c("PHENO", "SOURCE", "SINK"))
     reduce_mask <- matrix(1, nrow(R), ncol(R))
-    for (i in seq_len(length(xtypes) - 1)) {
-      ii <- which(dt == xtypes[i])
-      jj <- which(dt == xtypes[i + 1])
-      R1 <- R[ii, jj, drop = FALSE]
-      rii <- apply(abs(R1), 1, function(r) utils::tail(sort(r), nc)[1])
-      rjj <- apply(abs(R1), 2, function(r) utils::tail(sort(r), nc)[1])
-      rr <- abs(R1) >= rii | t(t(abs(R1)) >= rjj)
-      reduce_mask[ii, jj] <- rr
-      reduce_mask[jj, ii] <- t(rr)
+    if (length(xtypes) >= 2) {
+      for (i in seq_len(length(xtypes) - 1)) {
+        ii <- which(dt == xtypes[i])
+        jj <- which(dt == xtypes[i + 1])
+        R1 <- R[ii, jj, drop = FALSE]
+        rii <- apply(abs(R1), 1, function(r) utils::tail(sort(r), nc)[1])
+        rjj <- apply(abs(R1), 2, function(r) utils::tail(sort(r), nc)[1])
+        rr <- abs(R1) >= rii | t(t(abs(R1)) >= rjj)
+        reduce_mask[ii, jj] <- rr
+        reduce_mask[jj, ii] <- t(rr)
+      }
     }
     if (intra) {
       for (i in seq_along(xtypes)) {
