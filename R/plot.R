@@ -754,7 +754,7 @@ layout_multipartite_3d <- function(graph, X, clust=c("svd","tsne","umap")) {
     nn <- nrow(ff[[k]])
     if(nn > 5 && clust == 'tsne') {
       if (!requireNamespace("Rtsne", quietly = TRUE)) stop("package Rtsne required for clust='tsne'")
-      px <- max(min(30, nn/3),2)
+      px <- max(min(30, (nn-1)/3),2)
       xy[[k]] <- Rtsne::Rtsne(ff[[k]], perplexity=px)$Y
     } else if(nn > 5 && clust == 'umap') {
       if (!requireNamespace("uwot", quietly = TRUE)) stop("package uwot required for clust='umap'")
