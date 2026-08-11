@@ -102,7 +102,6 @@ create_model <- function(data,
   xx <- X
   xx <- lapply(xx, as.matrix)
   if (!is.null(ntop) && ntop > 0) {
-    xx <- lapply(xx, function(x) head(x[order(-apply(x, 1, stats::sd, na.rm = TRUE)), , drop = FALSE], ntop))
     xx <- mofa.topSD(xx, ntop)
   }
 
