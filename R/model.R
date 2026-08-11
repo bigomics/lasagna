@@ -103,6 +103,25 @@ create_model <- function(data,
 
   ## merge data (handles non-matching samples)
   xx <- mofa.merge_data2(xx, merge.rows = "prefix", merge.cols = "union")
+
+  ## diagnose sample overlap across layers: warn (don't fail) when most
+  ## samples lack data in at least one layer, since this silently degrades
+  ## downstream correlation/model fit
+  row.layer <- sub(":.*", "", rownames(xx))
+  layer.names <- unique(row.layer)
+  layer.coverage <- sapply(layer.names, function(lyr) {
+    rows <- which(row.layer == lyr)
+    colSums(!is.na(xx[rows, , drop = FALSE])) > 0
+  })
+  complete.frac <- mean(rowSums(layer.coverage) == length(layer.names))
+  na.frac <- mean(is.na(xx))
+  if (complete.frac < 0.5) {
+    warning(sprintf(
+      "create_model: merged data is %.0f%% NA after combining %d layers with only partial sample overlap; only %.0f%% of samples have data in every layer; results may be unreliable",
+      100 * na.frac, length(layer.names), 100 * complete.frac
+    ), call. = FALSE)
+  }
+
   kk <- intersect(colnames(xx), rownames(Y))
   xx <- xx[, kk]
   Y <- Y[kk, ]
