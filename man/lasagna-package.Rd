@@ -6,6 +6,23 @@
 \alias{lasagna-package}
 \title{lasagna: Multi-Layer Graph Analysis for Multi-Omics Data}
 \description{
-LASAGNA (multi-layer graph analysis) builds multi-partite graphs from multi-omics data layers and solves for condition-specific subnetworks. Supports interactive 3D visualization with plotly, visNetwork, and grimon.
+LASAGNA (multi-layer graph analysis) builds multi-partite graphs from multi-omics data layers and solves for condition-specific subnetworks. Edges between layers are weighted by feature-feature correlation and can be conditioned on a phenotype of interest. The package provides interactive 2D and 3D visualisations of the resulting networks using plotly and visNetwork.
+}
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/bigomics/lasagna}
+  \item Report bugs at \url{https://github.com/bigomics/lasagna/issues}
+}
+
+}
+\author{
+\strong{Maintainer}: Ivo Kwee \email{ivo.kwee@bigomics.com}
+
+Other contributors:
+\itemize{
+  \item BigOmics Analytics SA [copyright holder, funder]
+}
+
 }
 \keyword{internal}

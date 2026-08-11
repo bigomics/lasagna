@@ -52,3 +52,17 @@ Filters vertices and edges by layer, node value, edge weight,
 edge sign, and edge type (inter vs intra). Useful for reducing
 graph complexity before visualization.
 }
+\examples{
+set.seed(1)
+gx <- matrix(rnorm(20 * 10), 20, 10,
+  dimnames = list(paste0("g", 1:20), paste0("S", 1:10)))
+px <- matrix(rnorm(15 * 10), 15, 10,
+  dimnames = list(paste0("p", 1:15), paste0("S", 1:10)))
+samples <- data.frame(group = rep(c("A", "B"), each = 5),
+  row.names = paste0("S", 1:10))
+data <- list(X = list(gx = gx, px = px), samples = samples)
+model <- create_model(data, ntop = 10, nc = 5)
+g <- solve(model, pheno = colnames(model$Y)[1], prune = FALSE)
+pruned <- prune_graph(g, ntop = 5, min.rho = 0)
+igraph::vcount(pruned)
+}

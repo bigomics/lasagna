@@ -62,6 +62,10 @@ plot_multipartite(
 
 \item{edge.alpha}{Edge transparency.}
 
+\item{edge.gamma}{Gamma exponent applied to scaled edge widths.}
+
+\item{edge.colors}{Two colors for negative and positive edge weights.}
+
 \item{xdist}{Distance between layers.}
 
 \item{normalize.edges}{Normalize edges per connection type.}
@@ -82,13 +86,32 @@ plot_multipartite(
 
 \item{prune}{Remove disconnected vertices.}
 
+\item{do.plot}{Logical; if \code{FALSE}, compute the layout without drawing.}
+
+\item{color.var}{Vertex colouring: \code{"value"} (by sign) or
+\code{"color"} (use the vertex \code{color} attribute).}
+
 \item{layout}{Layout type: \code{"parallel"} or \code{"hive"}.}
 }
 \value{
-Invisibly returns NULL. Called for side effect (plot).
+Invisibly, a list with the pruned \code{graph} and its
+  \code{layout} coordinate matrix. Called mainly for the plot side effect.
 }
 \description{
 Plot multi-partite graph using base R graphics
 Draws a multi-layer LASAGNA graph as a parallel coordinate-style
 layout using base R \code{igraph::plot}.
+}
+\examples{
+set.seed(1)
+gx <- matrix(rnorm(20 * 10), 20, 10,
+  dimnames = list(paste0("g", 1:20), paste0("S", 1:10)))
+px <- matrix(rnorm(15 * 10), 15, 10,
+  dimnames = list(paste0("p", 1:15), paste0("S", 1:10)))
+samples <- data.frame(group = rep(c("A", "B"), each = 5),
+  row.names = paste0("S", 1:10))
+data <- list(X = list(gx = gx, px = px), samples = samples)
+model <- create_model(data, ntop = 10, nc = 5)
+g <- solve(model, pheno = colnames(model$Y)[1], prune = FALSE)
+mp <- plot_multipartite(g, min.rho = 0, ntop = 10)
 }
