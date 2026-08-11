@@ -760,6 +760,8 @@ layout_multipartite_3d <- function(graph, X, clust=c("svd","tsne","umap")) {
       if (!requireNamespace("uwot", quietly = TRUE)) stop("package uwot required for clust='umap'")
       nb <- max(min(15, nn/3),2)
       xy[[k]] <- uwot::umap(ff[[k]], n_neighbors=nb)
+    } else if(nn == 1) {
+      xy[[k]] <- matrix(0, nrow=1, ncol=2)
     } else {
       xy[[k]] <- svd(ff[[k]])$u[,1:2]
     }
