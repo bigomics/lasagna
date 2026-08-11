@@ -71,6 +71,10 @@ create_model <- function(data,
   
   if (meta.type %in% c("pheno","samples")) {
     Y <- expandPhenoMatrix(meta, drop.ref = FALSE)
+    if (is.null(Y)) {
+      stop("[create_model] no phenotype column with resolvable/varying groups found in samples/meta; ",
+           "check that it has a factor or character column with at least 2 distinct values")
+    }
   } else if (meta.type %in% c("expanded","traits")) {
     Y <- 1 * meta
   } else if (meta.type == "contrasts") {
