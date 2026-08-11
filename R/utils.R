@@ -87,7 +87,7 @@ mofa.merge_data2 <- function(xdata, merge.rows = "prefix", merge.cols = "union")
     A <- xdata[[i]]
     ii <- match(rownames(D), rownames(A))
     jj <- match(colnames(D), colnames(A))
-    A1 <- A[ii, jj]
+    A1 <- A[ii, jj, drop = FALSE]
     nn <- nn + !is.na(A1) * 1
     A1[is.na(A1)] <- 0
     D <- D + A1
