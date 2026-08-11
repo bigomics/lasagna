@@ -780,9 +780,9 @@ lasagna_edge_segments <- function(df, edges, edgetype1, edgetype2, z1, z2,
   ee <- edges[sel, ]
   idx <- as.vector(t(as.matrix(ee[, 1:2])))
   dfe <- rbind(df1, df2)[idx, ]
-  dfe$pair_id <- as.vector(mapply(rep, 1:nrow(ee), 2))
+  dfe$pair_id <- rep(seq_len(nrow(ee)), each = 2)
   cc <- edge_colors[1 + (ee[, 3] > 0)]
-  dfe$col <- as.vector(mapply(rep, cc, 2))
+  dfe$col <- rep(cc, each = 2)
 
   return(dfe)
 
