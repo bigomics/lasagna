@@ -225,16 +225,26 @@ create_model <- function(data,
   ## add edge connection type as attribute
   igraph::V(gr)$layer <- sub(":.*", "", igraph::V(gr)$name)
   ee <- igraph::as_edgelist(gr)
-  etype <- apply(ee, 2, function(e) sub(":.*", "", e))
-  etype.idx <- apply(etype, 2, match, gr$layers)
-  rev.etype <- etype.idx[, 2] < etype.idx[, 1]
-  etype1 <- ifelse(rev.etype, etype.idx[, 2], etype.idx[, 1])
-  etype2 <- ifelse(rev.etype, etype.idx[, 1], etype.idx[, 2])
-  etype1 <- gr$layers[etype1]
-  etype2 <- gr$layers[etype2]
-  igraph::E(gr)$connection_type <- paste0(etype1, "->", etype2)
-  ii <- which(etype1 == etype2)
-  if (length(ii)) igraph::E(gr)$connection_type[ii] <- etype1[ii]
+  if (nrow(ee) < 2) {
+    ## apply() collapses to a plain vector (losing the edge x endpoint
+    ## matrix shape) when there are 0 or 1 edges; handle those directly
+    igraph::E(gr)$connection_type <- vapply(seq_len(nrow(ee)), function(i) {
+      ty <- sort(match(sub(":.*", "", ee[i, ]), gr$layers))
+      lyr <- gr$layers[ty]
+      if (lyr[1] == lyr[2]) lyr[1] else paste0(lyr[1], "->", lyr[2])
+    }, character(1))
+  } else {
+    etype <- apply(ee, 2, function(e) sub(":.*", "", e))
+    etype.idx <- apply(etype, 2, match, gr$layers)
+    rev.etype <- etype.idx[, 2] < etype.idx[, 1]
+    etype1 <- ifelse(rev.etype, etype.idx[, 2], etype.idx[, 1])
+    etype2 <- ifelse(rev.etype, etype.idx[, 1], etype.idx[, 2])
+    etype1 <- gr$layers[etype1]
+    etype2 <- gr$layers[etype2]
+    igraph::E(gr)$connection_type <- paste0(etype1, "->", etype2)
+    ii <- which(etype1 == etype2)
+    if (length(ii)) igraph::E(gr)$connection_type[ii] <- etype1[ii]
+  }
 
   return(list(graph = gr, X = xx, Y = Y, layers = layers))
 
