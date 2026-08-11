@@ -1,0 +1,11 @@
+^\.Rproj$
+^\.Rproj\.user$
+^Makefile$
+^CLAUDE\.md$
+^AGENTS\.md$
+^\.claude$
+^\.semquery$
+^\.beads$
+^local_data$
+^\.git$
+^\.gitignore$
