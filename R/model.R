@@ -194,8 +194,10 @@ create_model <- function(data,
         ii <- which(dt == xtypes[i])
         jj <- which(dt == xtypes[i + 1])
         R1 <- R[ii, jj, drop = FALSE]
-        rii <- apply(abs(R1), 1, function(r) utils::tail(sort(r), nc)[1])
-        rjj <- apply(abs(R1), 2, function(r) utils::tail(sort(r), nc)[1])
+        k_row <- pmax(ncol(R1) - nc + 1, 1)
+        k_col <- pmax(nrow(R1) - nc + 1, 1)
+        rii <- matrixStats::rowOrderStats(abs(R1), which = k_row)
+        rjj <- matrixStats::colOrderStats(abs(R1), which = k_col)
         rr <- abs(R1) >= rii | t(t(abs(R1)) >= rjj)
         reduce_mask[ii, jj] <- rr
         reduce_mask[jj, ii] <- t(rr)
@@ -205,8 +207,10 @@ create_model <- function(data,
       for (i in seq_along(xtypes)) {
         ii <- which(dt == xtypes[i])
         R1 <- R[ii, ii, drop = FALSE]
-        rii <- apply(abs(R1), 1, function(r) utils::tail(sort(r), nc)[1])
-        rjj <- apply(abs(R1), 2, function(r) utils::tail(sort(r), nc)[1])
+        k_row <- pmax(ncol(R1) - nc + 1, 1)
+        k_col <- pmax(nrow(R1) - nc + 1, 1)
+        rii <- matrixStats::rowOrderStats(abs(R1), which = k_row)
+        rjj <- matrixStats::colOrderStats(abs(R1), which = k_col)
         rr <- abs(R1) >= rii | t(t(abs(R1)) >= rjj)
         reduce_mask[ii, ii] <- rr
       }
