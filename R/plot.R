@@ -741,6 +741,7 @@ layout_hiveplot <- function(graph) {
 
 #' @export
 layout_multipartite_3d <- function(graph, X, clust=c("svd","tsne","umap")) {
+  clust <- match.arg(clust)
   layers <- graph$layers
   layers <- setdiff(layers, c("SOURCE","SINK"))
 
