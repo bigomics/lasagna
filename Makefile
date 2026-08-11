@@ -1,4 +1,4 @@
-PKGNAME := WGCNAplus
+PKGNAME := lasagna
 
 .PHONY: doc build install test check clean
 
