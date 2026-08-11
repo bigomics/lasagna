@@ -281,58 +281,9 @@ plot_visgraph <- function(graph,
                           layout = NULL,
                           physics = TRUE) {
 
-  if (is.null(layers)) layers <- graph$layers
+  sub <- visgraph_subgraph(graph, layers, ntop, min_rho, mst)
+  sub <- visgraph_style(sub, color.var, edge.colors, labcex, ecex, egamma)
 
-  sub <- igraph::subgraph(graph, igraph::V(graph)$layer %in% layers)
-
-  if (mst) {
-    ew <- 1 / (1e-8 + abs(igraph::E(sub)$weight)^2)
-    sub <- igraph::mst(sub, weights = ew)
-  }
-
-  if (ntop > 0) {
-    vsel <- utils::head(order(-abs(igraph::V(sub)$value)), ntop)
-    sub <- igraph::subgraph(sub, vsel)
-  }
-
-  if (min_rho > 0) {
-    sub <- igraph::subgraph_from_edges(sub, which(abs(igraph::E(sub)$weight) > min_rho))
-  }
-
-  vtype <- sub(":.*", "", igraph::V(sub)$name)
-  ntypes <- length(unique(vtype))
-  vcol <- "grey"
-
-  if (color.var %in% c("type","layer")) {
-    vcol <- grDevices::rainbow(ntypes)[as.factor(vtype)]
-  }
-
-  if (color.var == "value") {
-    vv <- igraph::V(sub)$value
-    vcol <- c("blue", "red")[1 + 1 * (vv > 0)]
-  }
-
-  if (color.var == "color") vcol <- igraph::V(sub)$color
-
-  vcol <- sub("^[A-Z]+","",vcol) ## strip away WGCNA prefix
-  igraph::V(sub)$color <- vcol
-  igraph::V(sub)$color.border <- "black"
- 
-  vtype <- c("down", "up")[1 + 1 * (igraph::V(sub)$value > 0)]
-  igraph::V(sub)$shape <- c("triangleDown", "triangle")[as.factor(vtype)]
-  igraph::V(sub)$value <- abs(igraph::V(sub)$value)^2
-  igraph::V(sub)$label.cex <- 0.8 * labcex
-
-  ## make special nodes as large as largest size
-  sel <- which(igraph::V(sub)$layer %in% c("SOURCE", "SINK", "PHENO"))
-  if (length(sel)) {
-    cex <- max(abs(igraph::V(sub)$value)) / max(abs(igraph::V(sub)$value[sel]))
-    igraph::V(sub)$value[sel] <- igraph::V(sub)$value[sel] * cex
-  }
-
-  igraph::E(sub)$width <- 5 * ecex * abs(igraph::E(sub)$weight)^egamma
-  igraph::E(sub)$color <- edge.colors[1 + 1 * (igraph::E(sub)$weight > 0)]
-  
   data <- visNetwork::toVisNetworkData(sub, idToLabel=FALSE)
 
   vis <- visNetwork::visNetwork(
@@ -363,17 +314,98 @@ plot_visgraph <- function(graph,
       )
     )
 
-  ## allow a layout pre-attached to the graph object to override the default
-  if (is.null(layout) && !is.null(sub$layout)) layout <- sub$layout
-  
-  if (!is.null(layout)) {
-    vv <- data$nodes$id
-    M <- layout[vv,]
-    M[,2] <- -M[,2]
+  M <- visgraph_layout_matrix(layout, sub, data$nodes$id)
+
+  if (!is.null(M)) {
     vis <- vis %>% visNetwork::visIgraphLayout(layout = "layout.norm", layoutMatrix = M)
   }
-  
+
   return(vis)
+
+}
+
+## Coordinate matrix to lay the nodes out with, in node order: the caller's
+## layout, otherwise a layout pre-attached to the graph object, with y
+## flipped to match the visNetwork axis. NULL when neither is given.
+visgraph_layout_matrix <- function(layout, sub, ids) {
+
+  if (is.null(layout)) layout <- sub$layout
+  if (is.null(layout)) return(NULL)
+
+  M <- layout[ids,]
+  M[,2] <- -M[,2]
+
+  return(M)
+
+}
+
+## Reduce the graph to what plot_visgraph will actually draw: the requested
+## layers, optionally its minimum spanning tree, the ntop strongest
+## vertices, and the edges above min_rho.
+visgraph_subgraph <- function(graph, layers, ntop, min_rho, mst) {
+
+  if (is.null(layers)) layers <- graph$layers
+
+  sub <- igraph::subgraph(graph, igraph::V(graph)$layer %in% layers)
+
+  if (mst) {
+    ew <- 1 / (1e-8 + abs(igraph::E(sub)$weight)^2)
+    sub <- igraph::mst(sub, weights = ew)
+  }
+
+  if (ntop > 0) {
+    vsel <- utils::head(order(-abs(igraph::V(sub)$value)), ntop)
+    sub <- igraph::subgraph(sub, vsel)
+  }
+
+  if (min_rho > 0) {
+    sub <- igraph::subgraph_from_edges(sub, which(abs(igraph::E(sub)$weight) > min_rho))
+  }
+
+  return(sub)
+
+}
+
+## Set the visNetwork drawing attributes on the subgraph: node color by the
+## chosen variable, up/down triangle shapes, node sizes from the (squared)
+## node values, and edge width/color from the edge weights.
+visgraph_style <- function(sub, color.var, edge.colors, labcex, ecex, egamma) {
+
+  vtype <- sub(":.*", "", igraph::V(sub)$name)
+  ntypes <- length(unique(vtype))
+  vcol <- "grey"
+
+  if (color.var %in% c("type","layer")) {
+    vcol <- grDevices::rainbow(ntypes)[as.factor(vtype)]
+  }
+
+  if (color.var == "value") {
+    vv <- igraph::V(sub)$value
+    vcol <- c("blue", "red")[1 + 1 * (vv > 0)]
+  }
+
+  if (color.var == "color") vcol <- igraph::V(sub)$color
+
+  vcol <- sub("^[A-Z]+","",vcol) ## strip away WGCNA prefix
+  igraph::V(sub)$color <- vcol
+  igraph::V(sub)$color.border <- "black"
+
+  vtype <- c("down", "up")[1 + 1 * (igraph::V(sub)$value > 0)]
+  igraph::V(sub)$shape <- c("triangleDown", "triangle")[as.factor(vtype)]
+  igraph::V(sub)$value <- abs(igraph::V(sub)$value)^2
+  igraph::V(sub)$label.cex <- 0.8 * labcex
+
+  ## make special nodes as large as largest size
+  sel <- which(igraph::V(sub)$layer %in% c("SOURCE", "SINK", "PHENO"))
+  if (length(sel)) {
+    cex <- max(abs(igraph::V(sub)$value)) / max(abs(igraph::V(sub)$value[sel]))
+    igraph::V(sub)$value[sel] <- igraph::V(sub)$value[sel] * cex
+  }
+
+  igraph::E(sub)$width <- 5 * ecex * abs(igraph::E(sub)$weight)^egamma
+  igraph::E(sub)$color <- edge.colors[1 + 1 * (igraph::E(sub)$weight > 0)]
+
+  return(sub)
 
 }
 
@@ -442,29 +474,65 @@ plot_3d <- function(graph,
       weight = igraph::E(graph)$weight)
   }
 
-  vx <- igraph::V(graph)$name
-  if(!is.null(layout) && is.data.frame(layout)) {
-    message("using user layout")
-  } else if(!is.null(layout) && is.character(layout)) {
-    if(is.null(X)) stop("must provide X or layout")
-    if(!all(vx %in% rownames(X))) stop("incomplete layout")    
-    if(!layout %in% c("svd","tsne","umap")) stop("invalid layout")
-    layout <- layout_multipartite_3d(graph, X, clust=layout)
-  } else if(is.null(layout) && !is.null(graph$layout))  {
-    ## allow a layout pre-attached to the graph object to override the default
-    message("using layout in graph object")
-    layout <- graph$layout
-  } else {
-    if(is.null(X)) stop("must provide X or layout")
-    if(!all(vx %in% rownames(X))) stop("incomplete layout")
-    layout <- layout_multipartite_3d(graph, X, clust="umap")
-  }
+  layout <- resolve_layout_3d(graph, layout, X)
 
   ## remove SINK/SOURCE
-  if(1) {
-    vv <- intersect(c("SINK","SOURCE"), igraph::V(graph)$name)
-    if(length(vv)) graph <- igraph::delete_vertices(graph, vv)
+  vv <- intersect(c("SINK","SOURCE"), igraph::V(graph)$name)
+  if(length(vv)) graph <- igraph::delete_vertices(graph, vv)
+
+  df <- build_node_frame_3d(graph, layout, cex.gamma, color.by)
+  edges <- select_edges_3d(edges, min_rho, sign_rho, num_edges)
+  if (is.null(znames)) znames <- default_layer_names()
+
+  edge.colors <- c()
+
+  plt <- plotlyLasagna(df, znames = znames, edges = edges,
+    edge_colors = edge_colors,
+    cex = cex, edge.cex = edge.cex, ax = ax)
+
+  return(plt)
+}
+
+## Resolve the 'layout' argument of plot_3d into a coordinate table: a
+## user-supplied data frame, a layout pre-attached to the graph object, or
+## a layout computed from X by the requested reduction method. These are
+## checks on plot_3d's own arguments, so they are reported against the
+## caller rather than against this helper.
+resolve_layout_3d <- function(graph, layout, X) {
+
+  caller <- sys.call(-1)
+  abort <- function(msg) stop(simpleError(msg, call = caller))
+
+  vx <- igraph::V(graph)$name
+
+  if(!is.null(layout) && is.data.frame(layout)) {
+    message("using user layout")
+    return(layout)
   }
+
+  if(!is.null(layout) && is.character(layout)) {
+    if(is.null(X)) abort("must provide X or layout")
+    if(!all(vx %in% rownames(X))) abort("incomplete layout")
+    if(!layout %in% c("svd","tsne","umap")) abort("invalid layout")
+    return(layout_multipartite_3d(graph, X, clust=layout))
+  }
+
+  if(is.null(layout) && !is.null(graph$layout)) {
+    ## allow a layout pre-attached to the graph object to override the default
+    message("using layout in graph object")
+    return(graph$layout)
+  }
+
+  if(is.null(X)) abort("must provide X or layout")
+  if(!all(vx %in% rownames(X))) abort("incomplete layout")
+
+  return(layout_multipartite_3d(graph, X, clust="umap"))
+
+}
+
+## Assemble the per-vertex plotting frame for plot_3d: layer-wise rescaled
+## x/y positions plus value, point size, color and hover text.
+build_node_frame_3d <- function(graph, layout, cex.gamma, color.by) {
 
   ## feature maps across datatypes
   vx <- igraph::V(graph)$name
@@ -484,7 +552,7 @@ plot_3d <- function(graph,
   df$value <- as.numeric(vars)
   df$size <- abs(as.numeric(vars))^cex.gamma
   df$color <- as.numeric(vars)
-  
+
   if (!is.null(igraph::V(graph)$color) && color.by == "color") {
     df$color <- igraph::V(graph)$color
     df$color <- sub("^[A-Z]+","",df$color) ## remove prefix
@@ -499,8 +567,17 @@ plot_3d <- function(graph,
   #df$z <- factor(df$z, levels = levels)
   df$text <- paste(rownames(df), "<br>value:", round(df$value, digits = 3))
 
-  ## filter edges
-  if (!is.null(edges) && min_rho >= 0) {
+  return(df)
+
+}
+
+## Keep only the edges that plot_3d will draw: filter on sign and minimum
+## weight, then cap the number of edges per layer pair.
+select_edges_3d <- function(edges, min_rho, sign_rho, num_edges) {
+
+  if (is.null(edges)) return(NULL)
+
+  if (min_rho >= 0) {
     if (sign_rho == "pos") {
       edges <- edges[ which(edges[, 3] > min_rho), ]
     } else if (sign_rho == "neg") {
@@ -510,7 +587,7 @@ plot_3d <- function(graph,
     }
   }
 
-  if (!is.null(edges) && num_edges > 0) {
+  if (num_edges > 0) {
     e1 <- sub(":.*","",edges[,1])
     e2 <- sub(":.*","",edges[,2])
     ee <- paste0(e1,'-',e2)
@@ -523,35 +600,30 @@ plot_3d <- function(graph,
     edges <- edges[edges[, 3] != 0, ]
   }
 
-  ## layer name mapping
-  if (is.null(znames)) {
-    znames <- c(
-      "PHENO" = "Phenotype",
-      "ph" = "Phenotype",
-      "gset" = "Pathway",
-      "mx" = "Metabolomics",
-      "lx" = "Lipidomics",      
-      "gx" = "Transcriptomics",
-      "tx" = "Transcriptomics",
-      "mir" = "microRNA",
-      "px" = "Proteomics",
-      "hx" = "Histone",
-      "hptm" = "hPTM",
-      "dr" = "Drug response",
-      "me" = "Methylation",
-      "mt" = "Mutation",
-      "mut" = "Mutation",      
-      "mu" = "Mutation"
-    )
-  }
+  return(edges)
 
-  edge.colors <- c()
-  
-  plt <- plotlyLasagna(df, znames = znames, edges = edges,
-    edge_colors = edge_colors,
-    cex = cex, edge.cex = edge.cex, ax = ax)
-  
-  return(plt)
+}
+
+## Default mapping of layer codes to display names.
+default_layer_names <- function() {
+  c(
+    "PHENO" = "Phenotype",
+    "ph" = "Phenotype",
+    "gset" = "Pathway",
+    "mx" = "Metabolomics",
+    "lx" = "Lipidomics",
+    "gx" = "Transcriptomics",
+    "tx" = "Transcriptomics",
+    "mir" = "microRNA",
+    "px" = "Proteomics",
+    "hx" = "Histone",
+    "hptm" = "hPTM",
+    "dr" = "Drug response",
+    "me" = "Methylation",
+    "mt" = "Mutation",
+    "mut" = "Mutation",
+    "mu" = "Mutation"
+  )
 }
 
 #' Internal plotly builder for LASAGNA 3D plot
@@ -640,18 +712,10 @@ plotlyLasagna <- function(df,
 
     ## add segments
     if (k < length(zz) && !is.null(edges)) {
-      sel1 <- which(edgetype1 == zz[k] & edgetype2 == zz[k + 1])
-      sel2 <- which(edgetype2 == zz[k] & edgetype1 == zz[k + 1])
-      df2 <- df[which(df$z == zz[k + 1]), c("x", "y", "z")]
-      sel <- unique(c(sel1, sel2))
+      dfe <- lasagna_edge_segments(df, edges, edgetype1, edgetype2,
+        zz[k], zz[k + 1], edge_colors)
 
-      if (length(sel)) {
-        ee <- edges[sel, ]
-        idx <- as.vector(t(as.matrix(ee[, 1:2])))
-        dfe <- rbind(df1[, c("x", "y", "z")], df2[, c("x", "y", "z")])[idx, ]
-        dfe$pair_id <- as.vector(mapply(rep, 1:nrow(ee), 2))
-        cc <- edge_colors[1 + (ee[, 3] > 0)]
-        dfe$col <- as.vector(mapply(rep, cc, 2))
+      if (!is.null(dfe)) {
         fig <- fig %>%
           plotly::add_trace(
             x = dfe$x,
@@ -668,25 +732,16 @@ plotlyLasagna <- function(df,
     }
 
     ## add layer title
-    ztext <- z
-    if (!is.null(znames) && (is.integer(z) || z %in% names(znames))) {
-      if (is.factor(z)) z <- as.character(z)
-      ztext <- znames[z]
-    }
+    title <- lasagna_layer_title(z, znames)
+    corner <- lasagna_axis_corner(ax, min.x, max.x, min.y, max.y)
 
-    ax <- ax %% 4
-    if(ax==0) {zx=min.x; zy=max.y}
-    if(ax==1) {zx=min.x; zy=min.y}
-    if(ax==2) {zx=max.x; zy=max.y}
-    if(ax==3) {zx=max.x; zy=min.y}
-    
     fig <- fig %>%
       plotly::add_text(
-        x = zx,
-        y = zy,
-        z = z,
+        x = corner$x,
+        y = corner$y,
+        z = title$z,
         mode = "text",
-        text = ztext,
+        text = title$text,
         textfont = list(size = 24),
         showlegend = FALSE,
         inherit = FALSE
@@ -705,6 +760,61 @@ plotlyLasagna <- function(df,
     )
 
   fig
+}
+
+## Build the line segments joining two adjacent layers: the edges running
+## between them, laid out as one x/y/z row per endpoint, grouped by pair
+## and colored by the sign of the edge weight. Returns NULL if the two
+## layers share no edges.
+lasagna_edge_segments <- function(df, edges, edgetype1, edgetype2, z1, z2,
+                                  edge_colors) {
+
+  sel1 <- which(edgetype1 == z1 & edgetype2 == z2)
+  sel2 <- which(edgetype2 == z1 & edgetype1 == z2)
+  sel <- unique(c(sel1, sel2))
+  if (!length(sel)) return(NULL)
+
+  df1 <- df[which(df$z == z1), c("x", "y", "z")]
+  df2 <- df[which(df$z == z2), c("x", "y", "z")]
+
+  ee <- edges[sel, ]
+  idx <- as.vector(t(as.matrix(ee[, 1:2])))
+  dfe <- rbind(df1, df2)[idx, ]
+  dfe$pair_id <- as.vector(mapply(rep, 1:nrow(ee), 2))
+  cc <- edge_colors[1 + (ee[, 3] > 0)]
+  dfe$col <- as.vector(mapply(rep, cc, 2))
+
+  return(dfe)
+
+}
+
+## Display name of a layer, and the z-coordinate to place it at. Looking up
+## a layer in znames also converts a factor level to its character label,
+## which the caller uses as the z-coordinate of the title.
+lasagna_layer_title <- function(z, znames) {
+
+  ztext <- z
+  if (!is.null(znames) && (is.integer(z) || z %in% names(znames))) {
+    if (is.factor(z)) z <- as.character(z)
+    ztext <- znames[z]
+  }
+
+  return(list(z = z, text = ztext))
+
+}
+
+## Plot corner (in x/y) that layer titles are anchored to, selected by
+## 'ax' modulo the four corners of the layer plane.
+lasagna_axis_corner <- function(ax, min.x, max.x, min.y, max.y) {
+
+  ax <- ax %% 4
+  if(ax==0) {zx=min.x; zy=max.y}
+  if(ax==1) {zx=min.x; zy=min.y}
+  if(ax==2) {zx=max.x; zy=max.y}
+  if(ax==3) {zx=max.x; zy=min.y}
+
+  return(list(x = zx, y = zy))
+
 }
 
 layout_multipartite <- function(graph, xpos=NULL, xdist=1) {
