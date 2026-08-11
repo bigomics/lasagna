@@ -96,8 +96,9 @@ plot_multipartite <- function(graph,
     prune = prune
   )
 
-  if (length(igraph::V(graph)) == 0) warning("graph has no nodes")
-  if (length(igraph::E(graph)) == 0) warning("graph has no edges")
+  if (length(igraph::V(graph)) == 0 || length(igraph::E(graph)) == 0) {
+    stop("plot_multipartite: no nodes/edges remain after filtering (layers=/ntop=/min.rho=) -- nothing to plot")
+  }
   
   layers <- graph$layers
   layers <- setdiff(layers, c("SOURCE", "SINK"))
