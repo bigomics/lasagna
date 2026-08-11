@@ -743,6 +743,18 @@ layout_hiveplot <- function(graph) {
 
 }
 
+#' Compute 3D layout coordinates per layer via dimensionality reduction
+#' Splits the input data matrix by layer and applies SVD, t-SNE, or UMAP
+#' to compute 2D (x, y) coordinates within each layer, combined with a
+#' layer factor as the z-coordinate, for use as a layout by \code{plot_3d}.
+#' @param graph An igraph object (output of \code{solve}).
+#' @param X Numeric matrix of features (rows, named to match graph vertex
+#'   names) by samples (columns), spanning all layers.
+#' @param clust Dimensionality reduction method used within each layer:
+#'   \code{"svd"}, \code{"tsne"}, or \code{"umap"}.
+#' @return A data frame with columns \code{x}, \code{y} (per-layer 2D
+#'   layout coordinates) and \code{z} (a factor giving the layer of each
+#'   vertex), one row per graph vertex, row names matching vertex names.
 #' @export
 layout_multipartite_3d <- function(graph, X, clust=c("svd","tsne","umap")) {
   clust <- match.arg(clust)
