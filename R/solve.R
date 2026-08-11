@@ -61,6 +61,9 @@ solve <- function(obj,
   rho <- stats::cor(t(X), y, use = "pairwise")[, 1]
   i0 <- which(y <= 0)
   i1 <- which(y > 0)
+  if (length(i0) == 0 || length(i1) == 0) {
+    stop("solve: phenotype '", pheno, "' has no samples on one side (degenerate/constant trait) -- cannot compute fold change")
+  }
   m1 <- rowMeans(X[, i1, drop = FALSE], na.rm = TRUE)
   m0 <- rowMeans(X[, i0, drop = FALSE], na.rm = TRUE)
   fc <- m1 - m0
