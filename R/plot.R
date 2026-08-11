@@ -246,7 +246,10 @@ plot_multipartite <- function(graph,
 #' @param color.var Vertex colouring: \code{"value"}, \code{"type"}/\code{"layer"},
 #'   or \code{"color"} (use the vertex \code{color} attribute).
 #' @param labcex Label size multiplier.
-#' @param layout Optional layout matrix (rows named by vertex).
+#' @param layout Optional layout matrix (rows named by vertex). If
+#'   \code{NULL}, a \code{layout} attribute pre-set on \code{graph}
+#'   (\code{graph$layout <- ...}) is used before falling back to the
+#'   default visNetwork layout.
 #' @param physics Enable physics simulation.
 #' @return A visNetwork widget.
 #' @examples
@@ -358,6 +361,7 @@ plot_visgraph <- function(graph,
       )
     )
 
+  ## allow a layout pre-attached to the graph object to override the default
   if (is.null(layout) && !is.null(sub$layout)) layout <- sub$layout
   
   if (!is.null(layout)) {
@@ -378,7 +382,9 @@ plot_visgraph <- function(graph,
 #' @param graph An igraph object (output of \code{solve}).
 #' @param layout Either a matrix/data frame with columns \code{x}, \code{y},
 #'   \code{z} (one row per vertex, row names matching vertex names), or a named
-#'   list of 2-column position matrices per layer.
+#'   list of 2-column position matrices per layer. If \code{NULL}, a
+#'   \code{layout} attribute pre-set on \code{graph} (\code{graph$layout <-
+#'   ...}) is used before falling back to an automatically computed layout.
 #' @param draw_edges Logical; draw inter-layer edges.
 #' @param num_edges Maximum number of edges per layer pair.
 #' @param min_rho Minimum absolute weight for edges.
@@ -436,6 +442,7 @@ plot_3d <- function(graph,
     if(!layout %in% c("svd","tsne","umap")) stop("invalid layout")
     layout <- layout_multipartite_3d(graph, X, clust=layout)
   } else if(is.null(layout) && !is.null(graph$layout))  {
+    ## allow a layout pre-attached to the graph object to override the default
     message("using layout in graph object")
     layout <- graph$layout
   } else {
