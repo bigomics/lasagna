@@ -150,7 +150,8 @@ create_model <- function(data,
   if (condition.edges) {
     message("conditioning edges...")
     rho <- stats::cor(t(xx), Y, use = "pairwise.complete.obs")
-    maxrho <- apply(abs(rho), 1, max, na.rm = TRUE)
+    maxrho <- matrixStats::rowMaxs(abs(rho), na.rm = TRUE)
+    names(maxrho) <- rownames(rho)
     ii <- grep("SINK|SOURCE", names(maxrho))
     if (length(ii)) maxrho[ii] <- 1
     rho.wt <- outer(maxrho, maxrho)
