@@ -17,6 +17,7 @@
 #' @param justgraph Only plot graph (no labels/titles).
 #' @param edge.cex Edge width multiplier.
 #' @param edge.alpha Edge transparency.
+#' @param edge.colors Two colors for negative and positive edge weights.
 #' @param xdist Distance between layers.
 #' @param normalize.edges Normalize edges per connection type.
 #' @param yheight Height of the y-axis layout.
@@ -245,6 +246,7 @@ plot_multipartite <- function(graph,
 #' @param egamma Gamma exponent applied to edge widths.
 #' @param color.var Vertex colouring: \code{"value"}, \code{"type"}/\code{"layer"},
 #'   or \code{"color"} (use the vertex \code{color} attribute).
+#' @param edge.colors Two colors for negative and positive edge weights.
 #' @param labcex Label size multiplier.
 #' @param layout Optional layout matrix (rows named by vertex). If
 #'   \code{NULL}, a \code{layout} attribute pre-set on \code{graph}
@@ -385,6 +387,9 @@ plot_visgraph <- function(graph,
 #'   list of 2-column position matrices per layer. If \code{NULL}, a
 #'   \code{layout} attribute pre-set on \code{graph} (\code{graph$layout <-
 #'   ...}) is used before falling back to an automatically computed layout.
+#' @param X Numeric matrix of features (rows, named to match graph vertex
+#'   names) by samples (columns), used to compute the layout when
+#'   \code{layout} is \code{NULL} or a method name.
 #' @param draw_edges Logical; draw inter-layer edges.
 #' @param num_edges Maximum number of edges per layer pair.
 #' @param min_rho Minimum absolute weight for edges.
@@ -392,8 +397,12 @@ plot_visgraph <- function(graph,
 #'   \code{"both"}.
 #' @param cex Point size multiplier.
 #' @param cex.gamma Gamma exponent applied to point sizes.
+#' @param edge.cex Edge width multiplier.
 #' @param color.by Vertex colouring: \code{"value"} or \code{"color"}.
+#' @param edge_colors Two colors for negative and positive edge weights.
 #' @param znames Named character vector mapping layer codes to display names.
+#' @param ax Integer (mod 4) selecting which plot corner the layer title
+#'   text is placed at.
 #' @return A plotly object.
 #' @examples
 #' set.seed(1)
@@ -549,8 +558,12 @@ plot_3d <- function(graph,
 #' Builds the actual plotly figure from a prepared data frame.
 #' @param df Data frame with columns: feature, x, y, z, color, text.
 #' @param znames Named character vector for layer display names.
+#' @param ax Integer (mod 4) selecting which plot corner the layer title
+#'   text is placed at.
 #' @param cex Point size multiplier.
+#' @param edge.cex Edge line width multiplier.
 #' @param edges Optional data frame of edges.
+#' @param edge_colors Two colors for negative and positive edge weights.
 #' @return A plotly object.
 #' @examples
 #' set.seed(1)
