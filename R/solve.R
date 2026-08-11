@@ -103,6 +103,9 @@ solve <- function(obj,
   }
 
   if (sp.weight) {
+    if (!all(c("SOURCE", "SINK") %in% igraph::V(graph)$name)) {
+      stop("sp.weight=TRUE requires a model built with add.sink=TRUE")
+    }
     sp.wt <- sp_edge_weight(graph, obj$layers)
     sp.wt <- (sp.wt / max(sp.wt, na.rm = TRUE))^2
     igraph::E(graph)$weight <- igraph::E(graph)$weight * sp.wt
