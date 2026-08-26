@@ -44,7 +44,7 @@ prune_graph <- function(graph,
                         prune = TRUE) {
 
   if (is.null(graph)) {
-    message("[lasagna::solve]: graph is NULL. Please check run of create_model() and solve(). Exiting.")
+    message("[lasagna::prune_graph]: graph is NULL. Please check run of create_model() and solve(). Exiting.")
     return(NULL)
   }
 
