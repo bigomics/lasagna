@@ -39,6 +39,11 @@ solve <- function(obj,
                   sp.weight = FALSE,
                   graph = NULL) {
 
+  if (is.null(obj)) {
+    message("[lasagna::solve]: obj is NULL. Please check run of create_model(). Exiting.")
+    return(NULL)
+  }
+
   if (!pheno %in% colnames(obj$Y)) stop("pheno not in Y")
 
   if (!"rho" %in% names(igraph::edge_attr(obj$graph))) {
@@ -263,25 +268,41 @@ multisolve <- function(obj,
                        prune = TRUE,
                        sp.weight = FALSE) {
 
+  if (is.null(obj)) {
+    message("[lasagna::multisolve]: obj is NULL. Please check run of create_model(). Exiting.")
+    return(NULL)
+  }
+
   if (is.null(traits)) traits <- colnames(obj$Y)
   traits <- intersect(traits, colnames(obj$Y))
 
   M <- list()
   V <- list()
   for (ct in traits) {
-    solved <- solve(obj,
-      pheno = ct,
-      min_rho = min_rho,
-      max_edges = max_edges,
-      value.type = value.type,
-      fc.weights = fc.weights,
-      sp.weight = sp.weight,
-      prune = FALSE
+    solved <- tryCatch(
+      solve(obj,
+        pheno = ct,
+        min_rho = min_rho,
+        max_edges = max_edges,
+        value.type = value.type,
+        fc.weights = fc.weights,
+        sp.weight = sp.weight,
+        prune = FALSE
+      ),
+      error = function(e) {
+        warning("multisolve: skipping trait '", ct, "': ", conditionMessage(e), call. = FALSE)
+        NULL
+      }
     )
+    if (is.null(solved)) next
     adj <- igraph::as_adjacency_matrix(solved, attr = "weight")
     M[[ct]] <- adj
     V[[ct]] <- igraph::V(solved)$value
     names(V[[ct]]) <- igraph::V(solved)$name
+  }
+
+  if (length(M) == 0) {
+    stop("multisolve: no traits produced a valid solve (all were degenerate/constant)")
   }
 
   ## RMS adjacency matrix as consensus solution

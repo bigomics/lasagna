@@ -76,6 +76,11 @@ plot_multipartite <- function(graph,
                               color.var = "value",
                               layout = c("parallel", "hive")[1]) {
 
+  if (is.null(graph)) {
+    message("[lasagna::plot_multipartite]: graph is NULL. Please check run of create_model() and solve(). Exiting.")
+    return(NULL)
+  }
+
   vattr <- igraph::vertex_attr_names(graph)
   edgeattr <- igraph::edge_attr_names(graph)
   if (!"rho" %in% edgeattr) warning("no rho in edge attributes")
@@ -281,6 +286,11 @@ plot_visgraph <- function(graph,
                           layout = NULL,
                           physics = TRUE) {
 
+  if (is.null(graph)) {
+    message("[lasagna::plot_visgraph]: graph is NULL. Please check run of create_model() and solve(). Nothing to plot. Exiting.")
+    return(NULL)
+  }
+
   sub <- visgraph_subgraph(graph, layers, ntop, min_rho, mst)
   sub <- visgraph_style(sub, color.var, edge.colors, labcex, ecex, egamma)
 
@@ -468,6 +478,12 @@ plot_3d <- function(graph,
                     color.by = "value",
                     edge_colors = c("blue", "magenta"),
                     znames = NULL, ax=0) {
+
+  if (is.null(graph)) {
+    message("[lasagna::plot_3d]: graph is NULL. Please check run of create_model() and solve(). Nothing to plot. Exiting.")
+    return(NULL)
+  }
+
   edges <- NULL
   if (draw_edges) {
     edges <- data.frame(igraph::as_edgelist(graph),
@@ -651,8 +667,13 @@ plotlyLasagna <- function(df,
                           znames = NULL, ax = 1,
                           cex = 1, edge.cex = 1,
                           edges = NULL,
-                          edge_colors = c("blue", "magenta")
-                          ) {
+                          edge_colors = c("blue", "magenta")) {
+
+  if (is.null(df) || nrow(df) == 0) {
+    message("[lasagna::plotlyLasagna]: df is NULL or empty. Nothing to plot. Exiting.")
+    return(NULL)
+  }
+
   zz <- sort(unique(df$z))
   min.x <- min(df$x, na.rm = TRUE)
   max.x <- max(df$x, na.rm = TRUE)
@@ -880,6 +901,12 @@ layout_hiveplot <- function(graph) {
 #'   vertex), one row per graph vertex, row names matching vertex names.
 #' @export
 layout_multipartite_3d <- function(graph, X, clust=c("svd","tsne","umap")) {
+
+  if (is.null(graph) || igraph::vcount(graph) == 0) {
+    message("[lasagna::layout_multipartite_3d]: graph is NULL or empty. Nothing to plot. Exiting.")
+    return(NULL)
+  }
+
   clust <- match.arg(clust)
   layers <- graph$layers
   layers <- setdiff(layers, c("SOURCE","SINK"))

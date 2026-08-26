@@ -43,6 +43,11 @@ prune_graph <- function(graph,
                         select = NULL,
                         prune = TRUE) {
 
+  if (is.null(graph)) {
+    message("[lasagna::solve]: graph is NULL. Please check run of create_model() and solve(). Exiting.")
+    return(NULL)
+  }
+
   layers <- resolve_layers(graph, layers)
   graph <- igraph::subgraph(graph, igraph::V(graph)$layer %in% layers)
 

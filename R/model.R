@@ -58,7 +58,7 @@ create_model <- function(data,
                          fully_connect = FALSE,
                          add.revpheno = TRUE,
                          condition.edges = TRUE) {
-  
+
   if(!is.null(data)) {
     X <- data$X
     meta <- data$samples
@@ -73,7 +73,7 @@ create_model <- function(data,
   if(is.null(data) && (is.null(X) || is.null(meta)) ) {
     stop("must supply data or {X, meta}.")
   }
-  
+
   if (meta.type %in% c("pheno","samples")) {
     Y <- expandPhenoMatrix(meta, drop.ref = FALSE)
     if (is.null(Y)) {
@@ -107,6 +107,11 @@ create_model <- function(data,
 
   ## merge data (handles non-matching samples)
   xx <- mofa.merge_data2(xx, merge.rows = "prefix", merge.cols = "union")
+
+  if (ncol(xx)<2) {
+    message("[create_model] < 2 samples detected. Cannot compute correlation. Returning NULL. Exiting.")
+    return(NULL)
+  }
 
   ## diagnose sample overlap across layers: warn (don't fail) when most
   ## samples lack data in at least one layer, since this silently degrades
