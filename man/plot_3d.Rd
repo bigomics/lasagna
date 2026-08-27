@@ -26,15 +26,39 @@ plot_3d(
 \arguments{
 \item{graph}{An igraph object (output of \code{solve}).}
 
+\item{layout}{Either a matrix/data frame with columns \code{x}, \code{y},
+\code{z} (one row per vertex, row names matching vertex names), or a named
+list of 2-column position matrices per layer. If \code{NULL}, a
+\code{layout} attribute pre-set on \code{graph} (\code{graph$layout <-
+...}) is used before falling back to an automatically computed layout.}
+
+\item{X}{Numeric matrix of features (rows, named to match graph vertex
+names) by samples (columns), used to compute the layout when
+\code{layout} is \code{NULL} or a method name.}
+
 \item{draw_edges}{Logical; draw inter-layer edges.}
 
 \item{num_edges}{Maximum number of edges per layer pair.}
 
 \item{min_rho}{Minimum absolute weight for edges.}
 
+\item{sign_rho}{Which edge signs to draw: \code{"pos"}, \code{"neg"} or
+\code{"both"}.}
+
+\item{cex}{Point size multiplier.}
+
+\item{cex.gamma}{Gamma exponent applied to point sizes.}
+
+\item{edge.cex}{Edge width multiplier.}
+
+\item{color.by}{Vertex colouring: \code{"value"} or \code{"color"}.}
+
+\item{edge_colors}{Two colors for negative and positive edge weights.}
+
 \item{znames}{Named character vector mapping layer codes to display names.}
 
-\item{pos}{Named list of 2-column position matrices per layer.}
+\item{ax}{Integer (mod 4) selecting which plot corner the layer title
+text is placed at.}
 }
 \value{
 A plotly object.
@@ -43,4 +67,23 @@ A plotly object.
 Plot LASAGNA graph in 3D using plotly
 Wrapper that creates a 3D plotly visualization from a solved
 LASAGNA graph and precomputed 2D positions per layer.
+}
+\examples{
+set.seed(1)
+gx <- matrix(rnorm(20 * 10), 20, 10,
+  dimnames = list(paste0("g", 1:20), paste0("S", 1:10)))
+px <- matrix(rnorm(15 * 10), 15, 10,
+  dimnames = list(paste0("p", 1:15), paste0("S", 1:10)))
+samples <- data.frame(group = rep(c("A", "B"), each = 5),
+  row.names = paste0("S", 1:10))
+data <- list(X = list(gx = gx, px = px), samples = samples)
+model <- create_model(data, ntop = 10, nc = 5)
+g <- solve(model, pheno = colnames(model$Y)[1], prune = FALSE)
+## build a simple per-layer 3D layout (random x/y, z = layer)
+vn <- igraph::V(g)$name
+layout <- data.frame(
+  x = runif(length(vn)), y = runif(length(vn)),
+  z = sub(":.*", "", vn),
+  row.names = sub(".*:", "", vn))
+fig <- plot_3d(g, layout = layout, num_edges = 20, min_rho = 0)
 }

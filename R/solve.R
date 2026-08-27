@@ -39,6 +39,11 @@ solve <- function(obj,
                   sp.weight = FALSE,
                   graph = NULL) {
 
+  if (is.null(obj)) {
+    message("[lasagna::solve]: obj is NULL. Please check run of create_model(). Exiting.")
+    return(NULL)
+  }
+
   if (!pheno %in% colnames(obj$Y)) stop("pheno not in Y")
 
   if (!"rho" %in% names(igraph::edge_attr(obj$graph))) {
@@ -47,10 +52,37 @@ solve <- function(obj,
 
   if (is.null(graph)) graph <- obj$graph
 
-  X <- obj$X
-  y <- obj$Y[, pheno]
+  ## score the nodes against the phenotype
+  dat <- mask_neutral_samples(obj$X, obj$Y[, pheno])
+  rho <- node_correlation(dat$X, dat$y)
+  fc <- node_foldchange(dat$X, dat$y, rho, pheno)
 
-  ## check if phenotype was coded -1/0/1
+  ## weight the edges from the node scores
+  graph <- set_node_values(graph, rho, fc, value.type)
+  graph <- set_edge_weights(graph, fc.weights)
+  if (sp.weight) graph <- add_sp_weight(graph, obj$layers)
+
+  ## zero the weight of every unwanted edge, then drop them in one go
+  if (min_rho > 0) graph <- zero_weak_edges(graph, min_rho)
+  if (max_edges > 0) graph <- zero_excess_edges(graph, max_edges)
+  graph <- igraph::delete_edges(graph, which(igraph::E(graph)$weight == 0))
+
+  ## prune vertices
+  if (prune) {
+    ewt <- igraph::E(graph)$weight
+    graph <- igraph::subgraph_from_edges(graph, which(abs(ewt) > 0))
+  }
+
+  return(graph)
+
+}
+
+## A phenotype coded -1/0/1 uses the zeros for the samples that belong to
+## neither side of the contrast. Mask those out of both the phenotype and its
+## PHENO rows in the data, so that they weigh on neither correlation nor fold
+## change.
+mask_neutral_samples <- function(X, y) {
+
   ii <- grep("PHENO", rownames(X))
   has.min1 <- (min(X[ii, ], na.rm = TRUE) < 0)
   if (length(ii) && has.min1) {
@@ -58,29 +90,61 @@ solve <- function(obj,
     y[y == 0] <- NA
   }
 
+  return(list(X = X, y = y))
+
+}
+
+## Correlation of each node with the phenotype. Nodes that are constant or
+## never observed together with the phenotype score zero rather than NA.
+node_correlation <- function(X, y) {
+
   rho <- stats::cor(t(X), y, use = "pairwise")[, 1]
+  rho[is.na(rho)] <- 0
+
+  return(rho)
+
+}
+
+## Fold change of each node between the two sides of the phenotype. For the
+## PHENO nodes a fold change is meaningless, so they take their correlation
+## instead.
+node_foldchange <- function(X, y, rho, pheno) {
+
   i0 <- which(y <= 0)
   i1 <- which(y > 0)
+  if (length(i0) == 0 || length(i1) == 0) {
+    stop("solve: phenotype '", pheno, "' has no samples on one side (degenerate/constant trait) -- cannot compute fold change")
+  }
   m1 <- rowMeans(X[, i1, drop = FALSE], na.rm = TRUE)
   m0 <- rowMeans(X[, i0, drop = FALSE], na.rm = TRUE)
   fc <- m1 - m0
-  rho[is.na(rho)] <- 0
 
-  ## for PHENO nodes 'foldchange' does not make sense
   ii <- grep("PHENO", names(fc))
   if (length(ii)) fc[ii] <- rho[ii]
 
-  ## set node values
+  return(fc)
+
+}
+
+## Attach both node scores to the graph and pick the one that acts as the
+## node value, which is what the edge weighting and the plots read.
+set_node_values <- function(graph, rho, fc, value.type) {
+
   igraph::V(graph)$rho <- rho
   igraph::V(graph)$fc <- fc
-  if (value.type == "rho") {
-    igraph::V(graph)$value <- rho
-  } else {
-    igraph::V(graph)$value <- fc
-  }
+  igraph::V(graph)$value <- if (value.type == "rho") rho else fc
   graph$value.type <- value.type
 
-  ## set edge weights from node values
+  return(graph)
+
+}
+
+## Weight each edge by its correlation, optionally scaled by the geometric
+## mean of the node values at both ends, so that edges between two nodes that
+## respond to the phenotype outweigh equally correlated but flat ones. The
+## SOURCE and SINK edges are bookkeeping and always weigh 1.
+set_edge_weights <- function(graph, fc.weights) {
+
   ww <- 1
   weight.type <- "rho"
   if (fc.weights) {
@@ -91,50 +155,49 @@ solve <- function(obj,
     weight.type <- paste0(weight.type, "*vv")
   }
 
-  ## edge weighting
   ee.rho <- igraph::E(graph)$rho
   ee.rho[is.na(ee.rho)] <- 0.1234
   igraph::E(graph)$weight <- ee.rho * ww
 
-  ## set SINK/SOURCE edges to 1
   if (any(grepl("SINK|SOURCE", igraph::V(graph)$name))) {
     igraph::E(graph)[.to("SINK")]$weight <- 1
     igraph::E(graph)[.from("SOURCE")]$weight <- 1
   }
-
-  if (sp.weight) {
-    sp.wt <- sp_edge_weight(graph, obj$layers)
-    sp.wt <- (sp.wt / max(sp.wt, na.rm = TRUE))^2
-    igraph::E(graph)$weight <- igraph::E(graph)$weight * sp.wt
-    weight.type <- paste0(weight.type, "*sp")
-  }
   graph$weight.type <- weight.type
 
-  ## threshold by minimum weight
-  if (min_rho > 0) {
-    dsel <- which(abs(igraph::E(graph)$weight) < min_rho)
-    igraph::E(graph)$weight[dsel] <- 0
+  return(graph)
+
+}
+
+## Scale the edge weights by how well each edge carries a strong path from
+## SOURCE to SINK, which favours edges of complete cross-layer chains over
+## strong but isolated ones. Needs the helper nodes that add.sink adds.
+add_sp_weight <- function(graph, layers) {
+
+  if (!all(c("SOURCE", "SINK") %in% igraph::V(graph)$name)) {
+    stop("sp.weight=TRUE requires a model built with add.sink=TRUE")
   }
 
-  ## limit edges per connection type
-  if (max_edges > 0) {
-    ewt <- igraph::E(graph)$weight
-    esel <- tapply(
-      seq_along(igraph::E(graph)), igraph::E(graph)$connection_type,
-      function(ii) utils::head(ii[order(-abs(ewt[ii]))], max_edges)
-    )
-    dsel <- setdiff(seq_along(igraph::E(graph)), unlist(esel))
-    igraph::E(graph)$weight[dsel] <- 0
-  }
+  sp.wt <- sp_edge_weight(graph, layers)
+  sp.wt <- (sp.wt / max(sp.wt, na.rm = TRUE))^2
+  igraph::E(graph)$weight <- igraph::E(graph)$weight * sp.wt
+  graph$weight.type <- paste0(graph$weight.type, "*sp")
 
-  ## delete zero edges
-  graph <- igraph::delete_edges(graph, which(igraph::E(graph)$weight == 0))
+  return(graph)
 
-  ## prune vertices
-  if (prune) {
-    ewt <- igraph::E(graph)$weight
-    graph <- igraph::subgraph_from_edges(graph, which(abs(ewt) > 0))
-  }
+}
+
+## Zero all but the 'max_edges' strongest edges of each connection type, so
+## that no single type can crowd out the others.
+zero_excess_edges <- function(graph, max_edges) {
+
+  ewt <- igraph::E(graph)$weight
+  esel <- tapply(
+    seq_along(igraph::E(graph)), igraph::E(graph)$connection_type,
+    function(ii) utils::head(ii[order(-abs(ewt[ii]))], max_edges)
+  )
+  dsel <- setdiff(seq_along(igraph::E(graph)), unlist(esel))
+  igraph::E(graph)$weight[dsel] <- 0
 
   return(graph)
 
@@ -205,25 +268,41 @@ multisolve <- function(obj,
                        prune = TRUE,
                        sp.weight = FALSE) {
 
+  if (is.null(obj)) {
+    message("[lasagna::multisolve]: obj is NULL. Please check run of create_model(). Exiting.")
+    return(NULL)
+  }
+
   if (is.null(traits)) traits <- colnames(obj$Y)
   traits <- intersect(traits, colnames(obj$Y))
 
   M <- list()
   V <- list()
   for (ct in traits) {
-    solved <- solve(obj,
-      pheno = ct,
-      min_rho = min_rho,
-      max_edges = max_edges,
-      value.type = value.type,
-      fc.weights = fc.weights,
-      sp.weight = sp.weight,
-      prune = FALSE
+    solved <- tryCatch(
+      solve(obj,
+        pheno = ct,
+        min_rho = min_rho,
+        max_edges = max_edges,
+        value.type = value.type,
+        fc.weights = fc.weights,
+        sp.weight = sp.weight,
+        prune = FALSE
+      ),
+      error = function(e) {
+        warning("multisolve: skipping trait '", ct, "': ", conditionMessage(e), call. = FALSE)
+        NULL
+      }
     )
+    if (is.null(solved)) next
     adj <- igraph::as_adjacency_matrix(solved, attr = "weight")
     M[[ct]] <- adj
     V[[ct]] <- igraph::V(solved)$value
     names(V[[ct]]) <- igraph::V(solved)$name
+  }
+
+  if (length(M) == 0) {
+    stop("multisolve: no traits produced a valid solve (all were degenerate/constant)")
   }
 
   ## RMS adjacency matrix as consensus solution

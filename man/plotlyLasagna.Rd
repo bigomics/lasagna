@@ -20,9 +20,16 @@ plotlyLasagna(
 
 \item{znames}{Named character vector for layer display names.}
 
+\item{ax}{Integer (mod 4) selecting which plot corner the layer title
+text is placed at.}
+
 \item{cex}{Point size multiplier.}
 
+\item{edge.cex}{Edge line width multiplier.}
+
 \item{edges}{Optional data frame of edges.}
+
+\item{edge_colors}{Two colors for negative and positive edge weights.}
 }
 \value{
 A plotly object.
@@ -30,4 +37,14 @@ A plotly object.
 \description{
 Internal plotly builder for LASAGNA 3D plot
 Builds the actual plotly figure from a prepared data frame.
+}
+\examples{
+set.seed(1)
+df <- data.frame(
+  feature = paste0("f", 1:10),
+  x = runif(10), y = runif(10),
+  z = rep(c("gx", "px"), each = 5),
+  color = rnorm(10), size = runif(10),
+  text = paste0("f", 1:10))
+fig <- plotlyLasagna(df)
 }

@@ -24,7 +24,7 @@ test_that("create_model works with minimal data", {
     samples = samples
   )
 
-  model <- create_model(data, pheno = "pheno", ntop = 10, nc = 5)
+  model <- create_model(data, meta.type = "pheno", ntop = 10, nc = 5)
 
   expect_true(is.list(model))
   expect_true("graph" %in% names(model))
@@ -59,7 +59,7 @@ test_that("solve works on created model", {
     samples = samples
   )
 
-  model <- create_model(data, pheno = "pheno", ntop = 10, nc = 5)
+  model <- create_model(data, meta.type = "pheno", ntop = 10, nc = 5)
   pheno <- colnames(model$Y)[1]
 
   solved <- solve(model, pheno = pheno, max_edges = 50)

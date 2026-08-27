@@ -2,6 +2,7 @@
 "_PACKAGE"
 
 #' @import igraph
+#' @importFrom magrittr %>%
 #' @importFrom matrixStats rowSds
 #' @importFrom stats cor median model.matrix sd
 #' @importFrom utils head tail type.convert

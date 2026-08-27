@@ -27,6 +27,16 @@ create_model(
 \item{data}{A list with \code{X} (named list of data matrices),
 \code{samples} (data frame), and optionally \code{contrasts}.}
 
+\item{X}{Named list of data matrices, one per layer. Alternative to
+\code{data} when \code{data} is not supplied.}
+
+\item{meta}{Sample phenotype data frame (or contrasts matrix, per
+\code{meta.type}). Alternative to \code{data} when \code{data} is
+not supplied.}
+
+\item{meta.type}{Phenotype type: \code{"pheno"}, \code{"expanded"},
+or \code{"contrasts"}.}
+
 \item{ntop}{Number of top-SD features per layer. Set 0 or NULL
 to keep all.}
 
@@ -47,9 +57,6 @@ to keep all.}
 \item{add.revpheno}{Add reversed phenotype contrasts.}
 
 \item{condition.edges}{Weight edges by phenotype correlation.}
-
-\item{pheno}{Phenotype type: \code{"pheno"}, \code{"expanded"},
-or \code{"contrasts"}.}
 }
 \value{
 A list with components:
@@ -65,4 +72,16 @@ A list with components:
 Create LASAGNA multi-layer graph model
 Builds a multi-partite graph from multi-omics data layers.
 Edges weighted by correlation, optionally conditioned on phenotype.
+}
+\examples{
+set.seed(1)
+gx <- matrix(rnorm(20 * 10), 20, 10,
+  dimnames = list(paste0("g", 1:20), paste0("S", 1:10)))
+px <- matrix(rnorm(15 * 10), 15, 10,
+  dimnames = list(paste0("p", 1:15), paste0("S", 1:10)))
+samples <- data.frame(group = rep(c("A", "B"), each = 5),
+  row.names = paste0("S", 1:10))
+data <- list(X = list(gx = gx, px = px), samples = samples)
+model <- create_model(data, ntop = 10, nc = 5)
+model$layers
 }

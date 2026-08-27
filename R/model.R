@@ -6,6 +6,11 @@
 #' Edges weighted by correlation, optionally conditioned on phenotype.
 #' @param data A list with \code{X} (named list of data matrices),
 #'   \code{samples} (data frame), and optionally \code{contrasts}.
+#' @param X Named list of data matrices, one per layer. Alternative to
+#'   \code{data} when \code{data} is not supplied.
+#' @param meta Sample phenotype data frame (or contrasts matrix, per
+#'   \code{meta.type}). Alternative to \code{data} when \code{data} is
+#'   not supplied.
 #' @param meta.type Phenotype type: \code{"pheno"}, \code{"expanded"},
 #'   or \code{"contrasts"}.
 #' @param ntop Number of top-SD features per layer. Set 0 or NULL
@@ -53,7 +58,7 @@ create_model <- function(data,
                          fully_connect = FALSE,
                          add.revpheno = TRUE,
                          condition.edges = TRUE) {
-  
+
   if(!is.null(data)) {
     X <- data$X
     meta <- data$samples
@@ -68,9 +73,13 @@ create_model <- function(data,
   if(is.null(data) && (is.null(X) || is.null(meta)) ) {
     stop("must supply data or {X, meta}.")
   }
-  
+
   if (meta.type %in% c("pheno","samples")) {
     Y <- expandPhenoMatrix(meta, drop.ref = FALSE)
+    if (is.null(Y)) {
+      stop("[create_model] no phenotype column with resolvable/varying groups found in samples/meta; ",
+           "check that it has a factor or character column with at least 2 distinct values")
+    }
   } else if (meta.type %in% c("expanded","traits")) {
     Y <- 1 * meta
   } else if (meta.type == "contrasts") {
@@ -93,12 +102,35 @@ create_model <- function(data,
   xx <- X
   xx <- lapply(xx, as.matrix)
   if (!is.null(ntop) && ntop > 0) {
-    xx <- lapply(xx, function(x) head(x[order(-apply(x, 1, stats::sd)), , drop = FALSE], ntop))
     xx <- mofa.topSD(xx, ntop)
   }
 
   ## merge data (handles non-matching samples)
   xx <- mofa.merge_data2(xx, merge.rows = "prefix", merge.cols = "union")
+
+  if (ncol(xx)<2) {
+    message("[create_model] < 2 samples detected. Cannot compute correlation. Returning NULL. Exiting.")
+    return(NULL)
+  }
+
+  ## diagnose sample overlap across layers: warn (don't fail) when most
+  ## samples lack data in at least one layer, since this silently degrades
+  ## downstream correlation/model fit
+  row.layer <- sub(":.*", "", rownames(xx))
+  layer.names <- unique(row.layer)
+  layer.coverage <- sapply(layer.names, function(lyr) {
+    rows <- which(row.layer == lyr)
+    colSums(!is.na(xx[rows, , drop = FALSE])) > 0
+  })
+  complete.frac <- mean(rowSums(layer.coverage) == length(layer.names))
+  na.frac <- mean(is.na(xx))
+  if (complete.frac < 0.5) {
+    warning(sprintf(
+      "create_model: merged data is %.0f%% NA after combining %d layers with only partial sample overlap; only %.0f%% of samples have data in every layer; results may be unreliable",
+      100 * na.frac, length(layer.names), 100 * complete.frac
+    ), call. = FALSE)
+  }
+
   kk <- intersect(colnames(xx), rownames(Y))
   xx <- xx[, kk]
   Y <- Y[kk, ]
@@ -123,7 +155,8 @@ create_model <- function(data,
   if (condition.edges) {
     message("conditioning edges...")
     rho <- stats::cor(t(xx), Y, use = "pairwise.complete.obs")
-    maxrho <- apply(abs(rho), 1, max, na.rm = TRUE)
+    maxrho <- matrixStats::rowMaxs(abs(rho), na.rm = TRUE)
+    names(maxrho) <- rownames(rho)
     ii <- grep("SINK|SOURCE", names(maxrho))
     if (length(ii)) maxrho[ii] <- 1
     rho.wt <- outer(maxrho, maxrho)
@@ -139,11 +172,13 @@ create_model <- function(data,
   if (!fully_connect) {
     layer_mask <- matrix(0, nrow(R), ncol(R))
     dimnames(layer_mask) <- dimnames(R)
-    for (i in seq_len(length(layers) - 1)) {
-      ii <- which(dt == layers[i])
-      jj <- which(dt == layers[i + 1])
-      layer_mask[ii, jj] <- 1
-      layer_mask[jj, ii] <- 1
+    if (length(layers) >= 2) {
+      for (i in seq_len(length(layers) - 1)) {
+        ii <- which(dt == layers[i])
+        jj <- which(dt == layers[i + 1])
+        layer_mask[ii, jj] <- 1
+        layer_mask[jj, ii] <- 1
+      }
     }
     if (intra) {
       for (i in seq_along(layers)) {
@@ -159,22 +194,28 @@ create_model <- function(data,
     message("reducing edges to maximum ", nc, " connections")
     xtypes <- setdiff(layers, c("PHENO", "SOURCE", "SINK"))
     reduce_mask <- matrix(1, nrow(R), ncol(R))
-    for (i in seq_len(length(xtypes) - 1)) {
-      ii <- which(dt == xtypes[i])
-      jj <- which(dt == xtypes[i + 1])
-      R1 <- R[ii, jj, drop = FALSE]
-      rii <- apply(abs(R1), 1, function(r) utils::tail(sort(r), nc)[1])
-      rjj <- apply(abs(R1), 2, function(r) utils::tail(sort(r), nc)[1])
-      rr <- abs(R1) >= rii | t(t(abs(R1)) >= rjj)
-      reduce_mask[ii, jj] <- rr
-      reduce_mask[jj, ii] <- t(rr)
+    if (length(xtypes) >= 2) {
+      for (i in seq_len(length(xtypes) - 1)) {
+        ii <- which(dt == xtypes[i])
+        jj <- which(dt == xtypes[i + 1])
+        R1 <- R[ii, jj, drop = FALSE]
+        k_row <- pmax(ncol(R1) - nc + 1, 1)
+        k_col <- pmax(nrow(R1) - nc + 1, 1)
+        rii <- matrixStats::rowOrderStats(abs(R1), which = k_row)
+        rjj <- matrixStats::colOrderStats(abs(R1), which = k_col)
+        rr <- abs(R1) >= rii | t(t(abs(R1)) >= rjj)
+        reduce_mask[ii, jj] <- rr
+        reduce_mask[jj, ii] <- t(rr)
+      }
     }
     if (intra) {
       for (i in seq_along(xtypes)) {
         ii <- which(dt == xtypes[i])
         R1 <- R[ii, ii, drop = FALSE]
-        rii <- apply(abs(R1), 1, function(r) utils::tail(sort(r), nc)[1])
-        rjj <- apply(abs(R1), 2, function(r) utils::tail(sort(r), nc)[1])
+        k_row <- pmax(ncol(R1) - nc + 1, 1)
+        k_col <- pmax(nrow(R1) - nc + 1, 1)
+        rii <- matrixStats::rowOrderStats(abs(R1), which = k_row)
+        rjj <- matrixStats::colOrderStats(abs(R1), which = k_col)
         rr <- abs(R1) >= rii | t(t(abs(R1)) >= rjj)
         reduce_mask[ii, ii] <- rr
       }
@@ -194,16 +235,26 @@ create_model <- function(data,
   ## add edge connection type as attribute
   igraph::V(gr)$layer <- sub(":.*", "", igraph::V(gr)$name)
   ee <- igraph::as_edgelist(gr)
-  etype <- apply(ee, 2, function(e) sub(":.*", "", e))
-  etype.idx <- apply(etype, 2, match, gr$layers)
-  rev.etype <- etype.idx[, 2] < etype.idx[, 1]
-  etype1 <- ifelse(rev.etype, etype.idx[, 2], etype.idx[, 1])
-  etype2 <- ifelse(rev.etype, etype.idx[, 1], etype.idx[, 2])
-  etype1 <- gr$layers[etype1]
-  etype2 <- gr$layers[etype2]
-  igraph::E(gr)$connection_type <- paste0(etype1, "->", etype2)
-  ii <- which(etype1 == etype2)
-  if (length(ii)) igraph::E(gr)$connection_type[ii] <- etype1[ii]
+  if (nrow(ee) < 2) {
+    ## apply() collapses to a plain vector (losing the edge x endpoint
+    ## matrix shape) when there are 0 or 1 edges; handle those directly
+    igraph::E(gr)$connection_type <- vapply(seq_len(nrow(ee)), function(i) {
+      ty <- sort(match(sub(":.*", "", ee[i, ]), gr$layers))
+      lyr <- gr$layers[ty]
+      if (lyr[1] == lyr[2]) lyr[1] else paste0(lyr[1], "->", lyr[2])
+    }, character(1))
+  } else {
+    etype <- apply(ee, 2, function(e) sub(":.*", "", e))
+    etype.idx <- apply(etype, 2, match, gr$layers)
+    rev.etype <- etype.idx[, 2] < etype.idx[, 1]
+    etype1 <- ifelse(rev.etype, etype.idx[, 2], etype.idx[, 1])
+    etype2 <- ifelse(rev.etype, etype.idx[, 1], etype.idx[, 2])
+    etype1 <- gr$layers[etype1]
+    etype2 <- gr$layers[etype2]
+    igraph::E(gr)$connection_type <- paste0(etype1, "->", etype2)
+    ii <- which(etype1 == etype2)
+    if (length(ii)) igraph::E(gr)$connection_type[ii] <- etype1[ii]
+  }
 
   return(list(graph = gr, X = xx, Y = Y, layers = layers))
 
